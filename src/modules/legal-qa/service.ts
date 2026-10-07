@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { normalizePersian } from "@/lib/text/normalize-persian";
 import { recommendLawyers } from "@/modules/lawyers/recommend";
+import type { LawyerRecommendationSet } from "@/modules/lawyers/types";
 import { loadLlmRegistry } from "@/providers/llm/registry";
 import { validateCitationIds } from "./citation-validator";
 import { retrieveHybrid } from "./retrieval";
@@ -17,7 +18,7 @@ const llmOutputSchema = z.object({
 const DEFAULT_DISCLAIMER =
   "این پاسخ صرفاً اطلاعات عمومی حقوقی است و جایگزین مشاوره رسمی وکیل نیست.";
 
-const EMPTY_LAWYERS = {
+const EMPTY_LAWYERS: LawyerRecommendationSet = {
   featured: [],
   others: []
 };
