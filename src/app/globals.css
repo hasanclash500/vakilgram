@@ -105,7 +105,7 @@ textarea {
   outline: none;
 }
 
-textarea:focus {
+input:focus,\ntextarea:focus {
   border-color: var(--accent);
 }
 
@@ -173,4 +173,48 @@ footer {
   padding: 24px 4px;
   color: var(--muted);
   font-size: 0.9rem;
+}
+
+.lawyer-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.lawyer-card {
+  display: block;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.lawyer-card:hover {
+  border-color: var(--accent);
+}
+
+.lawyer-card strong {
+  display: inline-block;
+  margin-inline-end: 8px;
+}
+
+.lawyer-card small,
+.lawyer-card p {
+  color: var(--muted);
+}
+
+.verified,
+.sponsored {
+  display: inline-block;
+  margin-inline-start: 6px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 0.72rem;
+}
+
+.sponsored {
+  color: var(--accent);
 }
