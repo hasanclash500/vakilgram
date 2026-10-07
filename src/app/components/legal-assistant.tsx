@@ -6,9 +6,45 @@ import {
   browserTextToSpeech
 } from "@/modules/voice/browser-voice";
 import type { LegalAnswer } from "@/modules/legal-qa/types";
+import type { LawyerRecommendation } from "@/modules/lawyers/types";
+
+function LawyerCard({
+  lawyer
+}: {
+  lawyer: LawyerRecommendation;
+}) {
+  function recordClick() {
+    void fetch(`/api/lawyers/${lawyer.id}/click`, {
+      method: "POST",
+      keepalive: true
+    });
+  }
+
+  return (
+    <a
+      className="lawyer-card"
+      href={`/lawyers/${lawyer.slug}`}
+      onClick={recordClick}
+    >
+      <div>
+        <strong>{lawyer.fullName}</strong>
+        {lawyer.verified && <span className="verified">تأییدشده</span>}
+        {lawyer.sponsored && <span className="sponsored">تبلیغاتی</span>}
+      </div>
+      <small>
+        {lawyer.city}
+        {lawyer.province ? `، ${lawyer.province}` : ""}
+      </small>
+      {lawyer.specialties.length > 0 && (
+        <p>{lawyer.specialties.join(" · ")}</p>
+      )}
+    </a>
+  );
+}
 
 export function LegalAssistant() {
   const [question, setQuestion] = useState("");
+  const [city, setCity] = useState("");
   const [mode, setMode] = useState<"simple" | "expert">("simple");
   const [answer, setAnswer] = useState<LegalAnswer | null>(null);
   const [loading, setLoading] = useState(false);
@@ -42,7 +78,11 @@ export function LegalAssistant() {
       const response = await fetch("/api/legal/ask", {
         method: "POST",
         headers: { "content-type": "application/json" },
-        body: JSON.stringify({ question: clean, mode })
+        body: JSON.stringify({
+          question: clean,
+          mode,
+          city: city.trim() || undefined
+        })
       });
 
       const body = await response.json();
@@ -100,6 +140,15 @@ export function LegalAssistant() {
           تخصصی
         </button>
       </div>
+
+      <label htmlFor="city">شهر شما (اختیاری)</label>
+      <input
+        id="city"
+        value={city}
+        onChange={(event) => setCity(event.target.value)}
+        placeholder="مثلاً تهران"
+        maxLength={100}
+      />
 
       <label htmlFor="question">پرسش حقوقی شما</label>
       <textarea
@@ -165,6 +214,28 @@ export function LegalAssistant() {
                       </a>
                     )}
                   </details>
+                ))}
+              </div>
+            </>
+          )}
+
+          {answer.lawyers.featured.length > 0 && (
+            <>
+              <h3>وکلای ویژه</h3>
+              <div className="lawyer-grid">
+                {answer.lawyers.featured.map((lawyer) => (
+                  <LawyerCard key={lawyer.id} lawyer={lawyer} />
+                ))}
+              </div>
+            </>
+          )}
+
+          {answer.lawyers.others.length > 0 && (
+            <>
+              <h3>سایر وکلای مرتبط</h3>
+              <div className="lawyer-grid">
+                {answer.lawyers.others.map((lawyer) => (
+                  <LawyerCard key={lawyer.id} lawyer={lawyer} />
                 ))}
               </div>
             </>
