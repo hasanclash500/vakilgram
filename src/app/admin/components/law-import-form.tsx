@@ -8,6 +8,7 @@ type SourceOption = {
 };
 
 type ImportMode = "manual" | "json" | "csv";
+type LawStatus = "ACTIVE" | "AMENDED" | "REPEALED" | "UNKNOWN";
 
 type ManualArticle = {
   number: string;
@@ -34,6 +35,7 @@ export function LawImportForm({
   const [lawTitle, setLawTitle] = useState("");
   const [lawSlug, setLawSlug] = useState("");
   const [lawSourceUrl, setLawSourceUrl] = useState("");
+  const [lawStatus, setLawStatus] = useState<LawStatus>("UNKNOWN");
   const [articles, setArticles] = useState<ManualArticle[]>([
     { ...EMPTY_ARTICLE }
   ]);
@@ -127,12 +129,15 @@ export function LawImportForm({
   }
 
   function buildPayload(): unknown {
-    if (mode !== "manual") return mode === "json" ? JSON.parse(payload) : payload;
+    if (mode !== "manual") {
+      return mode === "json" ? JSON.parse(payload) : payload;
+    }
 
     return {
       title: lawTitle.trim(),
       slug: lawSlug.trim(),
       sourceUrl: lawSourceUrl.trim() || null,
+      status: lawStatus,
       articles: articles.map((article) => ({
         number: article.number.trim(),
         title: article.title.trim() || null,
@@ -230,6 +235,20 @@ export function LawImportForm({
                 placeholder="civil-procedure"
               />
             </label>
+            <label>
+              وضعیت
+              <select
+                value={lawStatus}
+                onChange={(event) =>
+                  setLawStatus(event.target.value as LawStatus)
+                }
+              >
+                <option value="UNKNOWN">نامشخص</option>
+                <option value="ACTIVE">جاری</option>
+                <option value="AMENDED">اصلاح‌شده</option>
+                <option value="REPEALED">منسوخ</option>
+              </select>
+            </label>
           </div>
 
           <label>
@@ -312,8 +331,8 @@ export function LawImportForm({
             onChange={(event) => setPayload(event.target.value)}
             placeholder={
               mode === "json"
-                ? '{"title":"...","slug":"...","articles":[{"number":"1","text":"..."}]}'
-                : "law_title,law_slug,article_number,article_text\n..."
+                ? '{"title":"...","slug":"...","status":"ACTIVE","articles":[{"number":"1","text":"..."}]}'
+                : "law_title,law_slug,law_status,article_number,article_text\n..."
             }
           />
         </>

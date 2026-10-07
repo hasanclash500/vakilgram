@@ -55,6 +55,7 @@ export async function importLawDocument(
         sourceUrl: document.sourceUrl ?? null,
         enactedAt: asDate(document.enactedAt),
         effectiveAt: asDate(document.effectiveAt),
+        ...(document.status ? { status: document.status } : {}),
         metadata: serializeMetadata(document.metadata)
       },
       create: {
@@ -64,6 +65,7 @@ export async function importLawDocument(
         sourceUrl: document.sourceUrl ?? null,
         enactedAt: asDate(document.enactedAt),
         effectiveAt: asDate(document.effectiveAt),
+        status: document.status ?? "UNKNOWN",
         metadata: serializeMetadata(document.metadata)
       }
     });

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type {
   LawDocumentInput,
+  LawDocumentStatus,
   LawSourceAdapter
 } from "./types";
 
@@ -10,6 +11,13 @@ const REQUIRED_HEADERS = [
   "article_number",
   "article_text"
 ] as const;
+
+const STATUS_VALUES = new Set<LawDocumentStatus>([
+  "ACTIVE",
+  "AMENDED",
+  "REPEALED",
+  "UNKNOWN"
+]);
 
 function parseCsvRows(input: string): string[][] {
   const rows: string[][] = [];
@@ -63,6 +71,15 @@ function optionalUrl(value: string | undefined): string | null {
   return z.string().url().parse(clean);
 }
 
+function optionalStatus(value: string | undefined): LawDocumentStatus | undefined {
+  const clean = value?.trim().toUpperCase();
+  if (!clean) return undefined;
+  if (!STATUS_VALUES.has(clean as LawDocumentStatus)) {
+    throw new Error("Invalid law_status: " + clean);
+  }
+  return clean as LawDocumentStatus;
+}
+
 export class CsvLawAdapter implements LawSourceAdapter<string> {
   readonly name = "csv";
 
@@ -100,6 +117,7 @@ export class CsvLawAdapter implements LawSourceAdapter<string> {
       );
       const articleTitle =
         values[indexOf("article_title")]?.trim() || null;
+      const status = optionalStatus(values[indexOf("law_status")]);
 
       const existing = groups.get(slug);
       if (existing) {
@@ -107,6 +125,20 @@ export class CsvLawAdapter implements LawSourceAdapter<string> {
           throw new Error(
             "Rows with the same law_slug must have the same law_title"
           );
+        }
+
+        if (
+          status &&
+          existing.status &&
+          existing.status !== status
+        ) {
+          throw new Error(
+            "Rows with the same law_slug must have the same law_status"
+          );
+        }
+
+        if (status && !existing.status) {
+          existing.status = status;
         }
 
         existing.articles.push({
@@ -119,6 +151,7 @@ export class CsvLawAdapter implements LawSourceAdapter<string> {
         groups.set(slug, {
           title,
           slug,
+          status,
           sourceUrl: lawSourceUrl,
           articles: [
             {

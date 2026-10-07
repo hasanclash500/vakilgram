@@ -1,3 +1,9 @@
+export type LawDocumentStatus =
+  | "ACTIVE"
+  | "AMENDED"
+  | "REPEALED"
+  | "UNKNOWN";
+
 export interface LawArticleInput {
   number: string;
   title?: string | null;
@@ -11,6 +17,7 @@ export interface LawDocumentInput {
   sourceUrl?: string | null;
   enactedAt?: string | null;
   effectiveAt?: string | null;
+  status?: LawDocumentStatus;
   articles: LawArticleInput[];
   metadata?: Record<string, unknown>;
 }

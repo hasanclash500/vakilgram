@@ -17,6 +17,9 @@ const lawSchema = z.object({
   sourceUrl: z.string().url().nullable().optional(),
   enactedAt: z.string().datetime().nullable().optional(),
   effectiveAt: z.string().datetime().nullable().optional(),
+  status: z
+    .enum(["ACTIVE", "AMENDED", "REPEALED", "UNKNOWN"])
+    .optional(),
   articles: z.array(articleSchema).min(1),
   metadata: z.record(z.string(), z.unknown()).optional()
 });
