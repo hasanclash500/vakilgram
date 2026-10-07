@@ -371,3 +371,28 @@ footer {
     display: grid;
   }
 }
+
+
+.law-status {
+  display: inline-block;
+  margin-inline-start: 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0 7px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--muted);
+}
+
+.law-status-active {
+  color: var(--accent);
+}
+
+.law-status-repealed,
+.law-warning {
+  color: var(--danger);
+}
+
+.law-warning {
+  font-weight: 700;
+}

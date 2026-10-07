@@ -8,6 +8,13 @@ import {
 import type { LegalAnswer } from "@/modules/legal-qa/types";
 import type { LawyerRecommendation } from "@/modules/lawyers/types";
 
+const LAW_STATUS_LABELS: Record<string, string> = {
+  ACTIVE: "جاری",
+  AMENDED: "اصلاح‌شده",
+  REPEALED: "منسوخ",
+  UNKNOWN: "وضعیت نامشخص"
+};
+
 function LawyerCard({
   lawyer
 }: {
@@ -221,7 +228,22 @@ export function LegalAssistant() {
                   <details key={source.articleId}>
                     <summary>
                       {source.lawTitle} — ماده {source.articleNumber}
+                      <span
+                        className={
+                          "law-status law-status-" +
+                          source.lawStatus.toLowerCase()
+                        }
+                      >
+                        {LAW_STATUS_LABELS[source.lawStatus] ??
+                          source.lawStatus}
+                      </span>
                     </summary>
+                    {source.lawStatus === "REPEALED" && (
+                      <p className="law-warning">
+                        این منبع در پایگاه به‌عنوان منسوخ ثبت شده است؛
+                        برای وضعیت جاری، منابع جدیدتر را نیز بررسی کنید.
+                      </p>
+                    )}
                     <p>{source.text}</p>
                     {source.sourceUrl && (
                       <a

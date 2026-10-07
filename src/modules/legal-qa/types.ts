@@ -15,6 +15,7 @@ export interface RetrievedArticle {
 export interface LegalSource {
   articleId: string;
   lawTitle: string;
+  lawStatus: string;
   articleNumber: string;
   articleTitle: string | null;
   text: string;
