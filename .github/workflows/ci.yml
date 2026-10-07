@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -20,6 +20,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - run: node scripts/create-runtime-audit-manifest.mjs
       - run: npm install --package-lock-only --ignore-scripts
         working-directory: .runtime-audit
@@ -39,25 +40,9 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install
+          cache: npm
+      - run: npm ci
       - run: npm run db:generate
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
-      - name: Generate baseline schema SQL
-        run: |
-          mkdir -p prisma/migrations/0001_initial_schema
-          npx prisma migrate diff --from-empty --to-schema prisma/schema.prisma --script --output prisma/migrations/0001_initial_schema/migration.sql
-          printf '\n-- Full-text search index managed as custom SQL\nCREATE INDEX IF NOT EXISTS "articles_search_vector_idx" ON "articles" USING GIN ("search_vector");\n' >> prisma/migrations/0001_initial_schema/migration.sql
-      - name: Commit reproducibility files
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          git config user.name "vakilgram-ci"
-          git config user.email "vakilgram-ci@users.noreply.github.com"
-          git add package-lock.json prisma/migrations/0001_initial_schema/migration.sql
-          if git diff --cached --quiet; then
-            echo "Reproducibility files already current."
-          else
-            git commit -m "chore: lock dependencies and add baseline migration"
-            git push
-          fi

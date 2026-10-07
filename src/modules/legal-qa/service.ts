@@ -5,14 +5,21 @@ import { getRuntimeSettings } from "@/lib/settings/runtime-settings";
 import { recommendLawyers } from "@/modules/lawyers/recommend";
 import type { LawyerRecommendationSet } from "@/modules/lawyers/types";
 import { loadLlmRegistry } from "@/providers/llm/registry";
-import { validateCitationIds } from "./citation-validator";
+import {
+  collectGroundedCitationIds,
+  groundCitedTexts
+} from "./citation-validator";
 import { retrieveHybrid } from "./retrieval";
 import type { AnswerMode, LegalAnswer } from "./types";
 
+const citedTextSchema = z.object({
+  text: z.string().trim().min(1),
+  articleIds: z.array(z.string()).min(1).max(6)
+});
+
 const llmOutputSchema = z.object({
-  summary: z.string().min(1),
-  answer: z.string().min(1),
-  articleIds: z.array(z.string()).default([]),
+  summary: citedTextSchema,
+  points: z.array(citedTextSchema).min(1).max(10),
   legalArea: z.string().nullable().default(null)
 });
 
@@ -57,6 +64,7 @@ export async function answerLegalQuestion(
       [
         `ID: ${article.id}`,
         `قانون: ${article.lawTitle}`,
+        `وضعیت قانون: ${article.lawStatus}`,
         `ماده/شماره: ${article.number}`,
         `متن رسمی دیتابیس: ${article.text}`
       ].join("\n")
@@ -70,7 +78,7 @@ export async function answerLegalQuestion(
         {
           role: "system",
           content:
-            "تو دستیار حقوقی مستند فارسی هستی. فقط از متن مواد داده‌شده استفاده کن. هیچ قانون، ماده، رأی یا واقعیت حقوقی خارج از context نساز. خروجی فقط JSON معتبر باشد. articleIds فقط باید از IDهای داده‌شده انتخاب شوند."
+            "تو دستیار حقوقی مستند فارسی هستی. فقط از متن مواد داده‌شده استفاده کن. هر بند پاسخ و خلاصه باید articleIds خودش را داشته باشد و همه IDها باید دقیقاً از context باشند. هیچ قانون، ماده، رأی یا واقعیت حقوقی خارج از context نساز. اگر وضعیت قانون UNKNOWN یا REPEALED است، با قطعیت آن را قانون جاری معرفی نکن. خروجی فقط JSON معتبر باشد."
         },
         {
           role: "user",
@@ -81,7 +89,7 @@ export async function answerLegalQuestion(
             "مواد بازیابی‌شده:",
             context,
             "",
-            'JSON: {"summary":"...","answer":"...","articleIds":["..."],"legalArea":"..."}'
+            'JSON: {"summary":{"text":"...","articleIds":["..."]},"points":[{"text":"...","articleIds":["..."]}],"legalArea":"..."}'
           ].join("\n")
         }
       ]
@@ -89,12 +97,23 @@ export async function answerLegalQuestion(
     llmOutputSchema
   );
 
-  const validIds = validateCitationIds(
-    result.articleIds,
-    articles.map((article) => article.id)
-  );
+  const allowedIds = articles.map((article) => article.id);
+  const groundedPoints = groundCitedTexts(result.points, allowedIds);
+  if (groundedPoints.length === 0) {
+    return noSourceAnswer(disclaimer);
+  }
 
-  if (validIds.length === 0) {
+  const groundedSummary = groundCitedTexts(
+    [result.summary],
+    allowedIds
+  )[0];
+
+  const allGrounded = groundedSummary
+    ? [groundedSummary, ...groundedPoints]
+    : groundedPoints;
+
+  const citationIds = collectGroundedCitationIds(allGrounded);
+  if (citationIds.length === 0) {
     return noSourceAnswer(disclaimer);
   }
 
@@ -113,14 +132,22 @@ export async function answerLegalQuestion(
     lawyers = EMPTY_LAWYERS;
   }
 
+  const answer = groundedPoints
+    .map((point) => point.text)
+    .join("\n\n");
+
+  const summary =
+    groundedSummary?.text ??
+    (answer.length > 180 ? answer.slice(0, 177) + "..." : answer);
+
   return {
-    answer: result.answer,
-    summary: result.summary,
+    answer,
+    summary,
     legalArea: result.legalArea,
     lawyers,
     disclaimer,
     documented: true,
-    sources: validIds.flatMap((id) => {
+    sources: citationIds.flatMap((id) => {
       const article = byId.get(id);
       if (!article) return [];
 

@@ -1,59 +1,91 @@
 # وکیل‌گرام
 
-پلتفرم فارسی RTL برای پاسخ حقوقی مستند و معرفی وکلا.
+پلتفرم فارسی RTL برای پاسخ حقوقی مستند، دستیار صوتی و معرفی وکلای تأییدشده.
 
-> وضعیت: فاز ۱ در حال پیاده‌سازی است. در این فاز، دستیار صوتی نیز به‌صورت رسمی فعال است.
+> وضعیت: توسعه فاز ۱ روی شاخه `main` انجام می‌شود.
 
-## معماری فاز ۱
+## پشته فنی
 
-پشته:
-- Next.js 16 (App Router) + TypeScript + Tailwind CSS
-- PostgreSQL/Neon + pgvector + tsvector
-- Prisma ORM 7 (نسخه پایدار)
-- Zod برای اعتبارسنجی
-- Vitest + Playwright
-- معماری Provider برای LLM، Embedding، Speech-to-Text و Text-to-Speech
+- Next.js 16.3.8 + React 19 + TypeScript
+- PostgreSQL / Neon
+- pgvector + tsvector
+- Prisma ORM 7.10
+- Auth.js v5 + Prisma Adapter
+- Zod
+- Vitest
+- GitHub Actions
 
-ماژول‌ها:
-- `legal-qa`: نرمال‌سازی، retrieval ترکیبی، RRF، پاسخ ساختاریافته و اعتبارسنجی سخت ارجاع
-- `laws`: ورود دستی/فایلی، adapter منابع رسمی، نسخه‌بندی و صف بازبینی
-- `lawyers`: پروفایل، تخصص، شهر، تأیید ادمین
-- `ads`: سطح ویژه، rotation، ثبت کلیک و dedupe یک‌ساعته
-- `voice`: ورودی صوتی → STT → همان RAG حقوقی → پاسخ متنی → TTS اختیاری
-- `admin`: تنظیمات، منابع، AI providers، audit log
-- `auth`: احراز هویت و RBAC
+## قابلیت‌های فاز ۱
 
-## جداول اصلی
+- RAG حقوقی ترکیبی: Full-text + Embedding + RRF
+- پاسخ بندبه‌بند با citation معتبر به Articleهای بازیابی‌شده
+- نمایش متن ماده فقط از دیتابیس
+- ورود قانون به‌صورت دستی، JSON و CSV
+- Source رسمی/فعال و نسخه‌بندی ماده
+- صف بازبینی تغییرات مواد
+- دایرکتوری و پروفایل عمومی وکلا
+- مدیریت کامل پروفایل وکیل در پنل ادمین
+- سطح ویژه، rotation و dedupe کلیک یک‌ساعته
+- دستیار صوتی فارسی: STT مرورگر → همان RAG → TTS مرورگر
+- Provider chain برای LLM و Embedding با fallback و health metrics
+- Google OAuth و Magic Link با Resend
+- RBAC ادمین و Audit log
+- Security audit برای dependencyهای runtime
 
-`users`, `accounts`, `sessions`, `verification_tokens`,
-`settings`, `sources`, `laws`, `articles`, `article_versions`,
-`law_relations`, `ingestion_runs`, `ingestion_items`, `review_queue`,
-`lawyers`, `lawyer_specialties`, `lawyer_social_links`,
-`featured_tiers`, `lawyer_featured_subscriptions`, `ad_clicks`,
-`reviews`, `conversations`, `messages`, `wallets`, `wallet_transactions`,
-`ai_provider_configs`, `ai_usage_logs`, `audit_logs`.
+## قواعد صحت و حریم خصوصی
 
-## قواعد مهم
+- متن پرسش کاربر به‌صورت پیش‌فرض در دیتابیس لاگ نمی‌شود.
+- `ai_usage_logs` فقط Provider، latency، موفق/ناموفق بودن و کد خطا را نگه می‌دارد.
+- RAG فقط از Sourceهای `official=true` و `enabled=true` بازیابی می‌کند.
+- هر بند مدل باید حداقل یک `articleId` معتبر از context داشته باشد؛ بند بدون citation حذف می‌شود.
+- متن ماده قانونی از خروجی مدل گرفته نمی‌شود.
+- تبلیغات روی محتوای پاسخ یا ترتیب منابع حقوقی اثر ندارند.
+- IP خام برای dedupe تبلیغ ذخیره نمی‌شود.
+- API key داخل Git یا دیتابیس ذخیره نمی‌شود؛ فقط نام متغیر Environment در تنظیم Provider ثبت می‌شود.
 
-- متن پرسش و چت به‌صورت پیش‌فرض لاگ نمی‌شود.
-- پاسخ حقوقی فقط با ارجاع به رکوردهای معتبر دیتابیس قابل نمایش است.
-- متن ماده از دیتابیس نمایش داده می‌شود، نه از خروجی مدل.
-- تبلیغات هیچ اثری بر محتوای پاسخ حقوقی و ترتیب منابع ندارند.
-- هیچ کلید API داخل Git ذخیره نمی‌شود.
-- داده نمونه باید صریحاً برچسب «نمونه ساختگی» داشته باشد.
+## اجرای محلی
 
-## وضعیت قابلیت‌ها
+نیازمندی: Node.js 22 یا جدیدتر.
 
-- `FEATURE_VOICE=true` در فاز ۱
-- چت مستقل، کیف پول فعال، نظرات فعال، OTP، پرداخت و به‌روزرسانی زمان‌بندی‌شده: فازهای بعد
+1. وابستگی‌ها را دقیقاً از lockfile نصب کنید:
+   `npm ci`
+2. `.env.example` را برای Next.js به `.env.local` و برای Prisma CLI به `.env` کپی کنید.
+3. `DATABASE_URL` و `DIRECT_URL` را تنظیم کنید.
+4. Prisma Client:
+   `npm run db:generate`
+5. دیتابیس توسعه:
+   `npm run db:migrate -- --name local`
+6. در صورت نیاز seed:
+   `npm run db:seed`
+7. اجرا:
+   `npm run dev`
 
-## توسعه
+## استقرار
 
-شاخه اصلی `main` است. تغییرات فاز ۱ در commitهای کوچک و قابل بازگشت نگهداری می‌شوند.
+برای دیتابیس خالی، migrationهای commit‌شده را اجرا کنید:
 
-### اجرای محلی
+`npx prisma migrate deploy`
 
-1. `npm install`
-2. فایل `.env.example` را به `.env.local` کپی و مقادیر لازم را تنظیم کنید.
-3. `npm run db:generate`
-4. `npm run dev`
+ترتیب migrationها:
+- `0000_extensions`: فعال‌سازی pgvector
+- `0001_initial_schema`: schema کامل و GIN index جست‌وجوی متنی
+
+سپس برنامه را build کنید:
+
+`npm ci && npm run db:generate && npm run build`
+
+## تست و CI
+
+- `npm run typecheck`
+- `npm test`
+- `npm run build`
+
+روی هر push به `main` و Pull Request، GitHub Actions این موارد را اجرا می‌کند و dependencyهای runtime را برای آسیب‌پذیری High/Critical audit می‌کند.
+
+## متغیرهای مهم
+
+به `.env.example` مراجعه کنید. برای ادمین، `ADMIN_EMAILS` را تنظیم کنید. برای Magic Link، `AUTH_RESEND_KEY` و `EMAIL_FROM` لازم است. Google OAuth فقط وقتی `AUTH_GOOGLE_ID` و `AUTH_GOOGLE_SECRET` تنظیم باشند فعال می‌شود.
+
+## خارج از فاز ۱
+
+چت مستقل، کیف پول فعال، نظرات فعال، OTP، پرداخت و ingestion زمان‌بندی‌شده در فازهای بعدی فعال می‌شوند؛ جداول لازم برای توسعه بعدی از ابتدا در schema در نظر گرفته شده‌اند.

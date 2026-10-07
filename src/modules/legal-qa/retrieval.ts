@@ -7,6 +7,7 @@ type ArticleRow = {
   id: string;
   lawId: string;
   lawTitle: string;
+  lawStatus: string;
   number: string;
   title: string | null;
   text: string;
@@ -27,6 +28,7 @@ export async function retrieveByText(
       a.id,
       a."lawId" AS "lawId",
       l.title AS "lawTitle",
+      l.status::text AS "lawStatus",
       a.number,
       a.title,
       a.text,
@@ -37,9 +39,12 @@ export async function retrieveByText(
       ) AS score
     FROM articles a
     JOIN laws l ON l.id = a."lawId"
+    JOIN sources s ON s.id = l."sourceId"
     WHERE
-      COALESCE(a.search_vector, to_tsvector('simple', a."normalizedText"))
-      @@ plainto_tsquery('simple', ${normalizedQuestion})
+      s.official = TRUE
+      AND s.enabled = TRUE
+      AND COALESCE(a.search_vector, to_tsvector('simple', a."normalizedText"))
+        @@ plainto_tsquery('simple', ${normalizedQuestion})
     ORDER BY score DESC
     LIMIT ${limit}
   `;
@@ -69,13 +74,18 @@ async function retrieveByVector(
       a.id,
       a."lawId" AS "lawId",
       l.title AS "lawTitle",
+      l.status::text AS "lawStatus",
       a.number,
       a.title,
       a.text,
       a."sourceUrl" AS "sourceUrl"
     FROM articles a
     JOIN laws l ON l.id = a."lawId"
-    WHERE a.embedding IS NOT NULL
+    JOIN sources s ON s.id = l."sourceId"
+    WHERE
+      s.official = TRUE
+      AND s.enabled = TRUE
+      AND a.embedding IS NOT NULL
     ORDER BY a.embedding <=> ${vectorLiteral}::vector
     LIMIT ${limit}
   `;
