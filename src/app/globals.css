@@ -396,3 +396,52 @@ footer {
 .law-warning {
   font-weight: 700;
 }
+
+
+.hero-links,
+.source-links {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.hero-links a,
+.source-links a {
+  font-weight: 700;
+}
+
+.law-list {
+  display: grid;
+  gap: 14px;
+}
+
+.law-list-item,
+.law-article {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px;
+}
+
+.law-list-item {
+  color: var(--text);
+  text-decoration: none;
+}
+
+.law-list-item:hover {
+  border-color: var(--accent);
+}
+
+.law-list-item h2,
+.law-article h2 {
+  margin-top: 0;
+}
+
+.law-article {
+  scroll-margin-top: 24px;
+}
+
+.law-article-text {
+  white-space: pre-wrap;
+}

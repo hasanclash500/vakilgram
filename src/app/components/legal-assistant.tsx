@@ -7,13 +7,7 @@ import {
 } from "@/modules/voice/browser-voice";
 import type { LegalAnswer } from "@/modules/legal-qa/types";
 import type { LawyerRecommendation } from "@/modules/lawyers/types";
-
-const LAW_STATUS_LABELS: Record<string, string> = {
-  ACTIVE: "جاری",
-  AMENDED: "اصلاح‌شده",
-  REPEALED: "منسوخ",
-  UNKNOWN: "وضعیت نامشخص"
-};
+import { LAW_STATUS_LABELS } from "@/modules/laws/status";
 
 function LawyerCard({
   lawyer
@@ -245,15 +239,27 @@ export function LegalAssistant() {
                       </p>
                     )}
                     <p>{source.text}</p>
-                    {source.sourceUrl && (
+                    <div className="source-links">
                       <a
-                        href={source.sourceUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                        href={
+                          "/laws/" +
+                          source.lawSlug +
+                          "#article-" +
+                          source.articleId
+                        }
                       >
-                        منبع رسمی
+                        مشاهده ماده در وکیل‌گرام
                       </a>
-                    )}
+                      {source.sourceUrl && (
+                        <a
+                          href={source.sourceUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          منبع رسمی
+                        </a>
+                      )}
+                    </div>
                   </details>
                 ))}
               </div>

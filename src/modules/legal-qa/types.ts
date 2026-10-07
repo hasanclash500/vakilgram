@@ -4,6 +4,7 @@ export interface RetrievedArticle {
   id: string;
   lawId: string;
   lawTitle: string;
+  lawSlug: string;
   lawStatus: string;
   number: string;
   title: string | null;
@@ -15,6 +16,7 @@ export interface RetrievedArticle {
 export interface LegalSource {
   articleId: string;
   lawTitle: string;
+  lawSlug: string;
   lawStatus: string;
   articleNumber: string;
   articleTitle: string | null;

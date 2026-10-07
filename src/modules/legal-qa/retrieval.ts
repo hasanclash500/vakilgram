@@ -7,6 +7,7 @@ type ArticleRow = {
   id: string;
   lawId: string;
   lawTitle: string;
+  lawSlug: string;
   lawStatus: string;
   number: string;
   title: string | null;
@@ -28,6 +29,7 @@ export async function retrieveByText(
       a.id,
       a."lawId" AS "lawId",
       l.title AS "lawTitle",
+      l.slug AS "lawSlug",
       l.status::text AS "lawStatus",
       a.number,
       a.title,
@@ -74,6 +76,7 @@ async function retrieveByVector(
       a.id,
       a."lawId" AS "lawId",
       l.title AS "lawTitle",
+      l.slug AS "lawSlug",
       l.status::text AS "lawStatus",
       a.number,
       a.title,

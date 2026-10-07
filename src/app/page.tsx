@@ -10,6 +10,10 @@ export default function HomePage() {
           پرسش حقوقی خود را بنویسید یا با صدا مطرح کنید. پاسخ فقط در صورت
           وجود منبع معتبر در پایگاه قوانین ارائه می‌شود.
         </p>
+        <nav className="hero-links">
+          <a href="/laws">مرور قوانین</a>
+          <a href="/lawyers">دایرکتوری وکلا</a>
+        </nav>
       </header>
 
       <LegalAssistant />

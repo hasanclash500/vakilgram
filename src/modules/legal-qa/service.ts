@@ -154,6 +154,7 @@ export async function answerLegalQuestion(
       return [{
         articleId: article.id,
         lawTitle: article.lawTitle,
+        lawSlug: article.lawSlug,
         lawStatus: article.lawStatus,
         articleNumber: article.number,
         articleTitle: article.title,
