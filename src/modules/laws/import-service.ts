@@ -1,6 +1,7 @@
 import { createHash } from "node:crypto";
 import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { normalizePersian } from "@/lib/text/normalize-persian";
+import { indexArticles } from "./indexing-service";
 import type { LawDocumentInput } from "./adapters/types";
 
 function checksum(text: string): string {
@@ -23,6 +24,8 @@ export interface ImportLawResult {
   createdArticles: number;
   updatedArticles: number;
   unchangedArticles: number;
+  textIndexed: number;
+  embeddingIndexed: number;
 }
 
 export async function importLawDocument(
@@ -30,7 +33,7 @@ export async function importLawDocument(
   sourceId: string,
   document: LawDocumentInput
 ): Promise<ImportLawResult> {
-  return prisma.$transaction(async (tx) => {
+  const transactionResult = await prisma.$transaction(async (tx) => {
     const source = await tx.source.findFirst({
       where: {
         id: sourceId,
@@ -68,6 +71,7 @@ export async function importLawDocument(
     let createdArticles = 0;
     let updatedArticles = 0;
     let unchangedArticles = 0;
+    const changedArticleIds: string[] = [];
 
     for (const input of document.articles) {
       const normalizedText = normalizePersian(input.text);
@@ -107,6 +111,7 @@ export async function importLawDocument(
           }
         });
 
+        changedArticleIds.push(created.id);
         createdArticles += 1;
         continue;
       }
@@ -157,6 +162,7 @@ export async function importLawDocument(
         }
       });
 
+      changedArticleIds.push(existing.id);
       updatedArticles += 1;
     }
 
@@ -164,7 +170,22 @@ export async function importLawDocument(
       lawId: law.id,
       createdArticles,
       updatedArticles,
-      unchangedArticles
+      unchangedArticles,
+      changedArticleIds
     };
   });
+
+  const indexing = await indexArticles(
+    prisma,
+    transactionResult.changedArticleIds
+  );
+
+  return {
+    lawId: transactionResult.lawId,
+    createdArticles: transactionResult.createdArticles,
+    updatedArticles: transactionResult.updatedArticles,
+    unchangedArticles: transactionResult.unchangedArticles,
+    textIndexed: indexing.textIndexed,
+    embeddingIndexed: indexing.embeddingIndexed
+  };
 }

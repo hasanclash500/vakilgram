@@ -3,8 +3,40 @@ import { OpenAiCompatibleProvider } from "./openai-compatible";
 import type { LlmProvider, LlmRequest } from "./types";
 import type { z } from "zod";
 
+interface ProviderEntry {
+  configId: string;
+  provider: LlmProvider;
+}
+
+async function recordUsage(
+  prisma: PrismaClient,
+  input: {
+    providerConfigId: string;
+    success: boolean;
+    latencyMs: number;
+    errorCode?: string | null;
+  }
+): Promise<void> {
+  try {
+    await prisma.aiUsageLog.create({
+      data: {
+        providerConfigId: input.providerConfigId,
+        kind: "LLM",
+        success: input.success,
+        latencyMs: input.latencyMs,
+        errorCode: input.errorCode?.slice(0, 120) ?? null
+      }
+    });
+  } catch {
+    // Observability must never make the answer path fail.
+  }
+}
+
 export class LlmRegistry {
-  constructor(private readonly providers: LlmProvider[]) {}
+  constructor(
+    private readonly prisma: PrismaClient,
+    private readonly providers: ProviderEntry[]
+  ) {}
 
   async generateJson<T>(
     input: LlmRequest,
@@ -12,15 +44,29 @@ export class LlmRegistry {
   ): Promise<T> {
     const errors: string[] = [];
 
-    for (const provider of this.providers) {
+    for (const entry of this.providers) {
+      const startedAt = Date.now();
+
       try {
-        return await provider.generateJson(input, schema);
+        const result = await entry.provider.generateJson(input, schema);
+        await recordUsage(this.prisma, {
+          providerConfigId: entry.configId,
+          success: true,
+          latencyMs: Date.now() - startedAt
+        });
+        return result;
       } catch (error) {
-        errors.push(
-          `${provider.name}: ${
-            error instanceof Error ? error.message : "unknown error"
-          }`
-        );
+        const message =
+          error instanceof Error ? error.message : "unknown error";
+
+        await recordUsage(this.prisma, {
+          providerConfigId: entry.configId,
+          success: false,
+          latencyMs: Date.now() - startedAt,
+          errorCode: message
+        });
+
+        errors.push(`${entry.provider.name}: ${message}`);
       }
     }
 
@@ -40,7 +86,7 @@ export async function loadLlmRegistry(
     orderBy: { position: "asc" }
   });
 
-  const providers: LlmProvider[] = [];
+  const providers: ProviderEntry[] = [];
 
   for (const config of configs) {
     const apiKey = config.apiKeyEnv
@@ -49,16 +95,17 @@ export async function loadLlmRegistry(
 
     if (config.apiKeyEnv && !apiKey) continue;
 
-    providers.push(
-      new OpenAiCompatibleProvider({
+    providers.push({
+      configId: config.id,
+      provider: new OpenAiCompatibleProvider({
         name: config.name,
         baseUrl: config.baseUrl,
         model: config.model,
         apiKey,
         timeoutMs: config.timeoutMs
       })
-    );
+    });
   }
 
-  return new LlmRegistry(providers);
+  return new LlmRegistry(prisma, providers);
 }
