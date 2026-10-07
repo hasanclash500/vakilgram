@@ -1,7 +1,7 @@
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import NextAuth from "next-auth";
 import Google from "next-auth/providers/google";
-import Nodemailer from "next-auth/providers/nodemailer";
+import Resend from "next-auth/providers/resend";
 import { getPrisma } from "@/lib/db/prisma";
 
 const prisma = getPrisma();
@@ -23,10 +23,10 @@ const providers = [
   ...(process.env.AUTH_GOOGLE_ID && process.env.AUTH_GOOGLE_SECRET
     ? [Google]
     : []),
-  ...(process.env.EMAIL_SERVER && process.env.EMAIL_FROM
+  ...(process.env.AUTH_RESEND_KEY && process.env.EMAIL_FROM
     ? [
-        Nodemailer({
-          server: process.env.EMAIL_SERVER,
+        Resend({
+          apiKey: process.env.AUTH_RESEND_KEY,
           from: process.env.EMAIL_FROM
         })
       ]
