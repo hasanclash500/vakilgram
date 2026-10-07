@@ -4,11 +4,13 @@ import { adminAccessError } from "@/lib/auth/api";
 import { requireAdminUser } from "@/lib/auth/admin";
 import { writeAudit } from "@/lib/audit/write-audit";
 import { getPrisma } from "@/lib/db/prisma";
+import { CsvLawAdapter } from "@/modules/laws/adapters/csv";
 import { JsonLawAdapter } from "@/modules/laws/adapters/json";
 import { importLawDocument } from "@/modules/laws/import-service";
 
 const bodySchema = z.object({
   sourceId: z.string().min(1),
+  format: z.enum(["json", "csv"]).default("json"),
   payload: z.unknown()
 });
 
@@ -27,8 +29,17 @@ export async function POST(request: Request) {
     }
 
     const parsedBody = bodySchema.parse(JSON.parse(rawBody));
-    const adapter = new JsonLawAdapter();
-    const documents = await adapter.parse(parsedBody.payload);
+    const adapter =
+      parsedBody.format === "csv"
+        ? new CsvLawAdapter()
+        : new JsonLawAdapter();
+
+    const documents =
+      parsedBody.format === "csv"
+        ? await adapter.parse(
+            z.string().min(1).parse(parsedBody.payload)
+          )
+        : await adapter.parse(parsedBody.payload);
 
     const prisma = getPrisma();
     const results = [];
@@ -45,6 +56,7 @@ export async function POST(request: Request) {
       entityType: "LAW",
       details: {
         sourceId: parsedBody.sourceId,
+        format: parsedBody.format,
         documents: results.length,
         createdArticles: results.reduce(
           (sum, item) => sum + item.createdArticles,
@@ -64,7 +76,7 @@ export async function POST(request: Request) {
 
     if (error instanceof z.ZodError || error instanceof SyntaxError) {
       return NextResponse.json(
-        { error: "ساختار JSON نامعتبر است." },
+        { error: "ساختار داده ورودی نامعتبر است." },
         { status: 400 }
       );
     }
