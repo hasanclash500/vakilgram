@@ -2,10 +2,10 @@
 
 import { useState } from "react";
 
-type ProviderData = {
+export type ProviderData = {
   id: string;
   name: string;
-  kind: string;
+  kind: "LLM" | "EMBEDDING" | "STT" | "TTS";
   baseUrl: string;
   model: string;
   apiKeyEnv: string | null;
@@ -14,10 +14,19 @@ type ProviderData = {
   timeoutMs: number;
 };
 
+export type ProviderHealth = {
+  requests: number;
+  successes: number;
+  failures: number;
+  averageLatencyMs: number | null;
+};
+
 export function AiProviderEditor({
-  provider
+  provider,
+  health
 }: {
   provider: ProviderData;
+  health?: ProviderHealth;
 }) {
   const [form, setForm] = useState(provider);
   const [status, setStatus] = useState<string | null>(null);
@@ -68,6 +77,19 @@ export function AiProviderEditor({
         <strong>{provider.name}</strong>
         <span>{provider.kind}</span>
       </div>
+
+      {health && (
+        <div className="health-row">
+          <small>{health.requests} درخواست</small>
+          <small>{health.successes} موفق</small>
+          <small>{health.failures} خطا</small>
+          <small>
+            {health.averageLatencyMs === null
+              ? "latency —"
+              : Math.round(health.averageLatencyMs) + "ms"}
+          </small>
+        </div>
+      )}
 
       <label>
         مدل
