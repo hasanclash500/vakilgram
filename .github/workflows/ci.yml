@@ -17,8 +17,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - run: npm install --omit=dev --ignore-scripts
-      - run: npm audit --omit=dev --audit-level=high
+      - run: node scripts/create-runtime-audit-manifest.mjs
+      - run: npm install --package-lock-only --ignore-scripts
+        working-directory: .runtime-audit
+      - run: npm audit --audit-level=high
+        working-directory: .runtime-audit
 
   test:
     runs-on: ubuntu-latest
