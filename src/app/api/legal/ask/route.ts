@@ -5,7 +5,8 @@ import { answerLegalQuestion } from "@/modules/legal-qa/service";
 
 const requestSchema = z.object({
   question: z.string().trim().min(3).max(2000),
-  mode: z.enum(["simple", "expert"]).default("simple")
+  mode: z.enum(["simple", "expert"]).default("simple"),
+  city: z.string().trim().max(100).optional()
 });
 
 export async function POST(request: Request) {
@@ -14,7 +15,8 @@ export async function POST(request: Request) {
     const answer = await answerLegalQuestion(
       getPrisma(),
       input.question,
-      input.mode
+      input.mode,
+      input.city
     );
 
     return NextResponse.json(answer);
