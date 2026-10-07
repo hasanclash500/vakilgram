@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import type { PrismaClient } from "@/generated/prisma/client";
+import type { Prisma, PrismaClient } from "@/generated/prisma/client";
 import { normalizePersian } from "@/lib/text/normalize-persian";
 import type { LawDocumentInput } from "./adapters/types";
 
@@ -13,9 +13,9 @@ function asDate(value?: string | null): Date | null {
 
 function serializeMetadata(
   value?: Record<string, unknown>
-): unknown | undefined {
+): Prisma.InputJsonValue | undefined {
   if (!value) return undefined;
-  return JSON.parse(JSON.stringify(value));
+  return JSON.parse(JSON.stringify(value)) as Prisma.InputJsonValue;
 }
 
 export interface ImportLawResult {
