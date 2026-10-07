@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { normalizePersian } from "@/lib/text/normalize-persian";
+import { getRuntimeSettings } from "@/lib/settings/runtime-settings";
 import { recommendLawyers } from "@/modules/lawyers/recommend";
 import type { LawyerRecommendationSet } from "@/modules/lawyers/types";
 import { loadLlmRegistry } from "@/providers/llm/registry";
@@ -14,9 +15,6 @@ const llmOutputSchema = z.object({
   articleIds: z.array(z.string()).default([]),
   legalArea: z.string().nullable().default(null)
 });
-
-const DEFAULT_DISCLAIMER =
-  "این پاسخ صرفاً اطلاعات عمومی حقوقی است و جایگزین مشاوره رسمی وکیل نیست.";
 
 const EMPTY_LAWYERS: LawyerRecommendationSet = {
   featured: [],
@@ -42,7 +40,7 @@ export async function answerLegalQuestion(
   city?: string | null
 ): Promise<LegalAnswer> {
   const normalizedQuestion = normalizePersian(question);
-  const disclaimer = process.env.LEGAL_DISCLAIMER ?? DEFAULT_DISCLAIMER;
+  const { disclaimer } = await getRuntimeSettings(prisma);
 
   const articles = await retrieveHybrid(prisma, normalizedQuestion, 12);
   if (articles.length === 0) {

@@ -49,15 +49,34 @@ export function LegalAssistant() {
   const [answer, setAnswer] = useState<LegalAnswer | null>(null);
   const [loading, setLoading] = useState(false);
   const [listening, setListening] = useState(false);
+  const [voiceEnabled, setVoiceEnabled] = useState(
+    process.env.NEXT_PUBLIC_FEATURE_VOICE !== "false"
+  );
   const [sttSupported, setSttSupported] = useState(false);
   const [ttsSupported, setTtsSupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const voiceEnabled =
-    process.env.NEXT_PUBLIC_FEATURE_VOICE !== "false";
+  useEffect(() => {
+    void fetch("/api/public/settings", { cache: "no-store" })
+      .then((response) => response.json())
+      .then((settings: { voiceEnabled?: boolean }) => {
+        if (typeof settings.voiceEnabled === "boolean") {
+          setVoiceEnabled(settings.voiceEnabled);
+        }
+      })
+      .catch(() => {
+        // Environment default remains active when settings API is unavailable.
+      });
+  }, []);
 
   useEffect(() => {
-    if (!voiceEnabled) return;
+    if (!voiceEnabled) {
+      setSttSupported(false);
+      setTtsSupported(false);
+      browserTextToSpeech.stop();
+      return;
+    }
+
     setSttSupported(browserSpeechToText.isSupported());
     setTtsSupported(browserTextToSpeech.isSupported());
 

@@ -53,7 +53,13 @@ export default async function AdminPage() {
       href: "/admin/featured",
       title: "سطح ویژه",
       value: "مدیریت",
-      detail: "اولویت و اشتراک ویژه"
+      detail: "سطح، اولویت و اشتراک ویژه"
+    },
+    {
+      href: "/admin/settings",
+      title: "تنظیمات",
+      value: "فاز ۱",
+      detail: "Voice و هشدار حقوقی"
     },
     {
       href: "/admin/review-queue",

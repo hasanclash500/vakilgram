@@ -4,6 +4,7 @@ import {
   FeaturedAssignmentForm,
   FeaturedSubscriptionToggle
 } from "../components/featured-assignment-form";
+import { FeaturedTierManager } from "../components/featured-tier-manager";
 import { getAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
 
@@ -21,7 +22,6 @@ export default async function AdminFeaturedPage() {
       select: { id: true, fullName: true }
     }),
     prisma.featuredTier.findMany({
-      where: { active: true },
       orderBy: { priority: "desc" }
     }),
     prisma.lawyerFeaturedSubscription.findMany({
@@ -34,53 +34,71 @@ export default async function AdminFeaturedPage() {
     })
   ]);
 
+  const activeTiers = tiers.filter((tier) => tier.active);
+
   return (
     <main className="shell">
       <p><Link href="/admin">بازگشت به داشبورد</Link></p>
       <header className="hero">
         <span className="eyebrow">مدیریت تبلیغات</span>
         <h1>سطح ویژه</h1>
+        <p>
+          تبلیغ فقط در پیشنهاد وکیل اثر می‌گذارد و نباید ترتیب منابع یا
+          محتوای پاسخ حقوقی را تغییر دهد.
+        </p>
       </header>
 
-      <FeaturedAssignmentForm
-        lawyers={lawyers.map((item) => ({
-          id: item.id,
-          label: item.fullName
-        }))}
-        tiers={tiers.map((item) => ({
-          id: item.id,
-          label: item.name
-        }))}
-      />
+      <div className="admin-stack">
+        <FeaturedTierManager
+          initialTiers={tiers.map((tier) => ({
+            id: tier.id,
+            name: tier.name,
+            priority: tier.priority,
+            costPerClick: tier.costPerClick.toString(),
+            active: tier.active
+          }))}
+        />
 
-      <section className="admin-table-wrap">
-        <h2>اشتراک‌های اخیر</h2>
-        <table className="admin-table">
-          <thead>
-            <tr>
-              <th>وکیل</th>
-              <th>سطح</th>
-              <th>شروع</th>
-              <th>وضعیت</th>
-            </tr>
-          </thead>
-          <tbody>
-            {subscriptions.map((item) => (
-              <tr key={item.id}>
-                <td>{item.lawyer.fullName}</td>
-                <td>{item.tier.name}</td>
-                <td>{item.startsAt.toLocaleDateString("fa-IR")}</td>
-                <td>
-                  <FeaturedSubscriptionToggle
-                    id={item.id}
-                    initialActive={item.active}
-                  />
-                </td>
+        <FeaturedAssignmentForm
+          lawyers={lawyers.map((item) => ({
+            id: item.id,
+            label: item.fullName
+          }))}
+          tiers={activeTiers.map((item) => ({
+            id: item.id,
+            label: item.name
+          }))}
+        />
+
+        <section className="admin-table-wrap">
+          <h2>اشتراک‌های اخیر</h2>
+          <table className="admin-table">
+            <thead>
+              <tr>
+                <th>وکیل</th>
+                <th>سطح</th>
+                <th>شروع</th>
+                <th>وضعیت</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </section>
+            </thead>
+            <tbody>
+              {subscriptions.map((item) => (
+                <tr key={item.id}>
+                  <td>{item.lawyer.fullName}</td>
+                  <td>{item.tier.name}</td>
+                  <td>{item.startsAt.toLocaleDateString("fa-IR")}</td>
+                  <td>
+                    <FeaturedSubscriptionToggle
+                      id={item.id}
+                      initialActive={item.active}
+                    />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </div>
     </main>
   );
 }
