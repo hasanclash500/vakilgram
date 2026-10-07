@@ -147,6 +147,38 @@ export function LawImportForm({
     };
   }
 
+  async function readImportFile(file: File) {
+    const maxBytes = 2 * 1024 * 1024;
+
+    if (file.size > maxBytes) {
+      setMessage("حجم فایل بیشتر از ۲ مگابایت است.");
+      return;
+    }
+
+    const lowerName = file.name.toLowerCase();
+    const nextMode: ImportMode =
+      lowerName.endsWith(".csv") ? "csv" : "json";
+
+    if (
+      !lowerName.endsWith(".csv") &&
+      !lowerName.endsWith(".json")
+    ) {
+      setMessage("فقط فایل JSON یا CSV قابل انتخاب است.");
+      return;
+    }
+
+    try {
+      const text = await file.text();
+      setMode(nextMode);
+      setPayload(text);
+      setMessage(
+        `فایل ${file.name} خوانده شد؛ قبل از ثبت، پیش‌نمایش را بررسی کنید.`
+      );
+    } catch {
+      setMessage("خواندن فایل انجام نشد.");
+    }
+  }
+
   async function submit() {
     if (!sourceId || !preview?.valid || submitting) return;
 
@@ -321,6 +353,24 @@ export function LawImportForm({
         </>
       ) : (
         <>
+          <label htmlFor="lawFile">
+            انتخاب فایل JSON/CSV
+            <input
+              id="lawFile"
+              type="file"
+              accept=".json,.csv,application/json,text/csv"
+              onChange={(event) => {
+                const file = event.target.files?.[0];
+                if (file) void readImportFile(file);
+                event.target.value = "";
+              }}
+            />
+          </label>
+          <p className="disclaimer">
+            فایل در مرورگر خوانده می‌شود و فقط محتوای تأییدشده برای API
+            ارسال می‌شود. سقف حجم: ۲ مگابایت.
+          </p>
+
           <label htmlFor="lawPayload">
             {mode === "json" ? "JSON قانون" : "CSV قانون"}
           </label>
