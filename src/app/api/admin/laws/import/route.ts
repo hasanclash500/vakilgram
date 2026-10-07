@@ -29,17 +29,12 @@ export async function POST(request: Request) {
     }
 
     const parsedBody = bodySchema.parse(JSON.parse(rawBody));
-    const adapter =
-      parsedBody.format === "csv"
-        ? new CsvLawAdapter()
-        : new JsonLawAdapter();
-
     const documents =
       parsedBody.format === "csv"
-        ? await adapter.parse(
+        ? await new CsvLawAdapter().parse(
             z.string().min(1).parse(parsedBody.payload)
           )
-        : await adapter.parse(parsedBody.payload);
+        : await new JsonLawAdapter().parse(parsedBody.payload);
 
     const prisma = getPrisma();
     const results = [];
