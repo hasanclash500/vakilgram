@@ -1,0 +1,451 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+enum UserRole {
+  USER
+  LAWYER
+  ADMIN
+}
+
+enum LawStatus {
+  ACTIVE
+  AMENDED
+  REPEALED
+  UNKNOWN
+}
+
+enum IngestionStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  NEEDS_REVIEW
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ProviderKind {
+  LLM
+  EMBEDDING
+  STT
+  TTS
+}
+
+enum WalletTransactionType {
+  CREDIT
+  DEBIT
+  AD_CLICK
+  REFUND
+  ADJUSTMENT
+}
+
+model User {
+  id            String         @id @default(cuid())
+  name          String?
+  email         String?        @unique
+  emailVerified DateTime?
+  image         String?
+  role          UserRole       @default(USER)
+  accounts      Account[]
+  sessions      Session[]
+  lawyer        Lawyer?
+  reviews       Review[]
+  conversations Conversation[]
+  auditLogs     AuditLog[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("users")
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refreshToken      String? @db.Text
+  accessToken       String? @db.Text
+  expiresAt         Int?
+  tokenType         String?
+  scope             String?
+  idToken           String? @db.Text
+  sessionState      String?
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+  @@map("accounts")
+}
+
+model Session {
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([sessionToken])
+  @@index([userId])
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@id([identifier, token])
+  @@map("verification_tokens")
+}
+
+model Setting {
+  key       String   @id
+  value     Json
+  updatedAt DateTime @updatedAt
+
+  @@map("settings")
+}
+
+model Source {
+  id            String         @id @default(cuid())
+  name          String
+  baseUrl       String?
+  sourceType    String
+  official      Boolean        @default(true)
+  enabled       Boolean        @default(true)
+  config        Json?
+  laws          Law[]
+  ingestionRuns IngestionRun[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@map("sources")
+}
+
+model Law {
+  id          String        @id @default(cuid())
+  sourceId    String
+  title       String
+  slug        String        @unique
+  sourceUrl   String?
+  enactedAt   DateTime?
+  effectiveAt DateTime?
+  status      LawStatus     @default(UNKNOWN)
+  metadata    Json?
+  source      Source        @relation(fields: [sourceId], references: [id])
+  articles    Article[]
+  fromLinks   LawRelation[] @relation("LawRelationFrom")
+  toLinks     LawRelation[] @relation("LawRelationTo")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([sourceId])
+  @@map("laws")
+}
+
+model Article {
+  id             String                  @id @default(cuid())
+  lawId          String
+  number         String
+  title          String?
+  text           String                  @db.Text
+  normalizedText String                  @db.Text
+  sourceUrl      String?
+  checksum       String
+  currentVersion Int                     @default(1)
+  embedding      Unsupported("vector")?
+  searchVector   Unsupported("tsvector")? @map("search_vector")
+  law            Law                     @relation(fields: [lawId], references: [id], onDelete: Cascade)
+  versions       ArticleVersion[]
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  @@unique([lawId, number])
+  @@index([lawId])
+  @@map("articles")
+}
+
+model ArticleVersion {
+  id        String   @id @default(cuid())
+  articleId String
+  version   Int
+  text      String   @db.Text
+  checksum  String
+  sourceUrl String?
+  article   Article  @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([articleId, version])
+  @@map("article_versions")
+}
+
+model LawRelation {
+  id           String @id @default(cuid())
+  fromLawId    String
+  toLawId      String
+  relationType String
+  note         String?
+  fromLaw      Law    @relation("LawRelationFrom", fields: [fromLawId], references: [id], onDelete: Cascade)
+  toLaw        Law    @relation("LawRelationTo", fields: [toLawId], references: [id], onDelete: Cascade)
+
+  @@unique([fromLawId, toLawId, relationType])
+  @@map("law_relations")
+}
+
+model IngestionRun {
+  id         String          @id @default(cuid())
+  sourceId   String
+  status     IngestionStatus @default(PENDING)
+  startedAt  DateTime?
+  finishedAt DateTime?
+  summary    Json?
+  source     Source          @relation(fields: [sourceId], references: [id])
+  items      IngestionItem[]
+  createdAt  DateTime        @default(now())
+
+  @@index([sourceId, status])
+  @@map("ingestion_runs")
+}
+
+model IngestionItem {
+  id         String          @id @default(cuid())
+  runId      String
+  externalId String?
+  status     IngestionStatus @default(PENDING)
+  payload    Json?
+  error      String?         @db.Text
+  run        IngestionRun    @relation(fields: [runId], references: [id], onDelete: Cascade)
+  createdAt  DateTime        @default(now())
+
+  @@index([runId, status])
+  @@map("ingestion_items")
+}
+
+model ReviewQueue {
+  id           String       @id @default(cuid())
+  kind         String
+  entityId     String
+  beforeData   Json?
+  afterData    Json?
+  status       ReviewStatus @default(PENDING)
+  reviewedById String?
+  reviewedAt   DateTime?
+  createdAt    DateTime     @default(now())
+
+  @@index([status, createdAt])
+  @@map("review_queue")
+}
+
+model Lawyer {
+  id            String                       @id @default(cuid())
+  userId        String?                      @unique
+  fullName      String
+  slug          String                       @unique
+  licenseNumber String?                      @unique
+  city          String
+  province      String?
+  bio           String?                      @db.Text
+  avatarUrl     String?
+  verified      Boolean                      @default(false)
+  active        Boolean                      @default(true)
+  user          User?                        @relation(fields: [userId], references: [id])
+  specialties   LawyerSpecialty[]
+  socialLinks   LawyerSocialLink[]
+  featured      LawyerFeaturedSubscription[]
+  clicks        AdClick[]
+  reviews       Review[]
+  wallet        Wallet?
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  @@index([city, active])
+  @@map("lawyers")
+}
+
+model LawyerSpecialty {
+  id       String @id @default(cuid())
+  lawyerId String
+  area     String
+  lawyer   Lawyer @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+
+  @@unique([lawyerId, area])
+  @@index([area])
+  @@map("lawyer_specialties")
+}
+
+model LawyerSocialLink {
+  id       String @id @default(cuid())
+  lawyerId String
+  platform String
+  url      String
+  lawyer   Lawyer @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+
+  @@unique([lawyerId, platform])
+  @@map("lawyer_social_links")
+}
+
+model FeaturedTier {
+  id            String                       @id @default(cuid())
+  name          String
+  priority      Int
+  costPerClick  BigInt                       @default(0)
+  active        Boolean                      @default(true)
+  subscriptions LawyerFeaturedSubscription[]
+  createdAt     DateTime                     @default(now())
+  updatedAt     DateTime                     @updatedAt
+
+  @@map("featured_tiers")
+}
+
+model LawyerFeaturedSubscription {
+  id        String       @id @default(cuid())
+  lawyerId  String
+  tierId    String
+  startsAt  DateTime
+  endsAt    DateTime?
+  active    Boolean      @default(true)
+  lawyer    Lawyer       @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+  tier      FeaturedTier @relation(fields: [tierId], references: [id])
+
+  @@index([lawyerId, active])
+  @@index([tierId, active])
+  @@map("lawyer_featured_subscriptions")
+}
+
+model AdClick {
+  id             String   @id @default(cuid())
+  lawyerId       String
+  visitorHash    String
+  questionDomain String?
+  clickedAt      DateTime @default(now())
+  lawyer         Lawyer   @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+
+  @@index([lawyerId, visitorHash, clickedAt])
+  @@map("ad_clicks")
+}
+
+model Review {
+  id             String    @id @default(cuid())
+  lawyerId       String
+  userId         String?
+  rating         Int
+  comment        String?   @db.Text
+  interactionRef String?
+  hiddenAt       DateTime?
+  hiddenReason   String?
+  lawyer         Lawyer    @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+  user           User?     @relation(fields: [userId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  @@index([lawyerId, createdAt])
+  @@map("reviews")
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
+  messages  Message[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userId])
+  @@map("conversations")
+}
+
+model Message {
+  id             String       @id @default(cuid())
+  conversationId String
+  role           String
+  content        String       @db.Text
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
+
+  @@index([conversationId, createdAt])
+  @@map("messages")
+}
+
+model Wallet {
+  id        String              @id @default(cuid())
+  lawyerId  String              @unique
+  balance   BigInt              @default(0)
+  lawyer    Lawyer              @relation(fields: [lawyerId], references: [id], onDelete: Cascade)
+  entries   WalletTransaction[]
+  createdAt DateTime            @default(now())
+  updatedAt DateTime            @updatedAt
+
+  @@map("wallets")
+}
+
+model WalletTransaction {
+  id          String                @id @default(cuid())
+  walletId    String
+  type        WalletTransactionType
+  amount      BigInt
+  description String?
+  referenceId String?
+  wallet      Wallet                @relation(fields: [walletId], references: [id], onDelete: Cascade)
+  createdAt   DateTime              @default(now())
+
+  @@index([walletId, createdAt])
+  @@map("wallet_transactions")
+}
+
+model AiProviderConfig {
+  id          String          @id @default(cuid())
+  kind        ProviderKind
+  name        String
+  baseUrl     String
+  model       String
+  apiKeyEnv   String?
+  position    Int             @default(0)
+  enabled     Boolean         @default(true)
+  timeoutMs   Int             @default(15000)
+  metadata    Json?
+  usageLogs   AiUsageLog[]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([kind, enabled, position])
+  @@map("ai_provider_configs")
+}
+
+model AiUsageLog {
+  id               String            @id @default(cuid())
+  providerConfigId String?
+  kind             ProviderKind
+  success          Boolean
+  latencyMs        Int
+  errorCode        String?
+  providerConfig   AiProviderConfig? @relation(fields: [providerConfigId], references: [id], onDelete: SetNull)
+  createdAt        DateTime           @default(now())
+
+  @@index([kind, createdAt])
+  @@map("ai_usage_logs")
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  details    Json?
+  user       User?    @relation(fields: [userId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId, createdAt])
+  @@map("audit_logs")
+}
