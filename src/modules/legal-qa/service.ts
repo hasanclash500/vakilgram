@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { PrismaClient } from "@/generated/prisma/client";
 import { normalizePersian } from "@/lib/text/normalize-persian";
+import { recommendLawyers } from "@/modules/lawyers/recommend";
 import { loadLlmRegistry } from "@/providers/llm/registry";
 import { validateCitationIds } from "./citation-validator";
 import { retrieveHybrid } from "./retrieval";
@@ -16,12 +17,18 @@ const llmOutputSchema = z.object({
 const DEFAULT_DISCLAIMER =
   "این پاسخ صرفاً اطلاعات عمومی حقوقی است و جایگزین مشاوره رسمی وکیل نیست.";
 
+const EMPTY_LAWYERS = {
+  featured: [],
+  others: []
+};
+
 function noSourceAnswer(disclaimer: string): LegalAnswer {
   return {
     answer: "منبع مستند کافی برای پاسخ به این پرسش پیدا نشد.",
     summary: "منبع مستند پیدا نشد",
     legalArea: null,
     sources: [],
+    lawyers: EMPTY_LAWYERS,
     disclaimer,
     documented: false
   };
@@ -30,7 +37,8 @@ function noSourceAnswer(disclaimer: string): LegalAnswer {
 export async function answerLegalQuestion(
   prisma: PrismaClient,
   question: string,
-  mode: AnswerMode
+  mode: AnswerMode,
+  city?: string | null
 ): Promise<LegalAnswer> {
   const normalizedQuestion = normalizePersian(question);
   const disclaimer = process.env.LEGAL_DISCLAIMER ?? DEFAULT_DISCLAIMER;
@@ -95,10 +103,22 @@ export async function answerLegalQuestion(
     articles.map((article) => [article.id, article])
   );
 
+  let lawyers = EMPTY_LAWYERS;
+  try {
+    lawyers = await recommendLawyers(
+      prisma,
+      result.legalArea,
+      city
+    );
+  } catch {
+    lawyers = EMPTY_LAWYERS;
+  }
+
   return {
     answer: result.answer,
     summary: result.summary,
     legalArea: result.legalArea,
+    lawyers,
     disclaimer,
     documented: true,
     sources: validIds.flatMap((id) => {
