@@ -10,20 +10,30 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm install --omit=dev --ignore-scripts
+      - run: npm audit --omit=dev --audit-level=high
+
   test:
     runs-on: ubuntu-latest
     env:
       DATABASE_URL: postgresql://user:pass@localhost:5432/vakilgram
       DIRECT_URL: postgresql://user:pass@localhost:5432/vakilgram
       NEXT_PUBLIC_FEATURE_VOICE: "true"
-
+      AUTH_SECRET: ci-only-not-for-production-change-me
+      AUTH_TRUST_HOST: "true"
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
       - run: npm install
-      - run: npm audit --omit=dev --audit-level=high
       - run: npm run db:generate
       - run: npm run typecheck
       - run: npm test
