@@ -11,6 +11,13 @@ function asDate(value?: string | null): Date | null {
   return value ? new Date(value) : null;
 }
 
+function serializeMetadata(
+  value?: Record<string, unknown>
+): unknown | undefined {
+  if (!value) return undefined;
+  return JSON.parse(JSON.stringify(value));
+}
+
 export interface ImportLawResult {
   lawId: string;
   createdArticles: number;
@@ -45,7 +52,7 @@ export async function importLawDocument(
         sourceUrl: document.sourceUrl ?? null,
         enactedAt: asDate(document.enactedAt),
         effectiveAt: asDate(document.effectiveAt),
-        metadata: document.metadata
+        metadata: serializeMetadata(document.metadata)
       },
       create: {
         title: document.title,
@@ -54,7 +61,7 @@ export async function importLawDocument(
         sourceUrl: document.sourceUrl ?? null,
         enactedAt: asDate(document.enactedAt),
         effectiveAt: asDate(document.effectiveAt),
-        metadata: document.metadata
+        metadata: serializeMetadata(document.metadata)
       }
     });
 
