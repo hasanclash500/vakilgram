@@ -1,0 +1,12 @@
+.DS_Store
+node_modules
+.next
+out
+coverage
+*.log
+.env
+.env.local
+.env.production
+.env.development
+!.env.example
+src/generated/prisma
