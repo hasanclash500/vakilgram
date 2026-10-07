@@ -89,12 +89,12 @@ model Account {
 }
 
 model Session {
+  id           String   @id @default(cuid())
   sessionToken String   @unique
   userId       String
   expires      DateTime
   user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@id([sessionToken])
   @@index([userId])
   @@map("sessions")
 }
@@ -104,7 +104,7 @@ model VerificationToken {
   token      String   @unique
   expires    DateTime
 
-  @@id([identifier, token])
+  @@unique([identifier, token])
   @@map("verification_tokens")
 }
 
