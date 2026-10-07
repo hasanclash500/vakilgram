@@ -15,6 +15,7 @@ export default async function AdminPage() {
   const [
     lawCount,
     articleCount,
+    sourceCount,
     lawyerCount,
     pendingReviewCount,
     providerCount,
@@ -22,6 +23,7 @@ export default async function AdminPage() {
   ] = await Promise.all([
     prisma.law.count(),
     prisma.article.count(),
+    prisma.source.count(),
     prisma.lawyer.count(),
     prisma.reviewQueue.count({ where: { status: "PENDING" } }),
     prisma.aiProviderConfig.count(),
@@ -29,12 +31,42 @@ export default async function AdminPage() {
   ]);
 
   const cards = [
-    { href: "/admin/laws", title: "قوانین", value: lawCount, detail: articleCount + " ماده" },
-    { href: "/admin/lawyers", title: "وکلا", value: lawyerCount, detail: "مدیریت تأیید و وضعیت" },
-    { href: "/admin/ai", title: "هوش مصنوعی", value: providerCount, detail: "Provider و fallback" },
-    { href: "/admin/featured", title: "سطح ویژه", value: "مدیریت", detail: "اولویت و اشتراک ویژه" },
-    { href: "/admin/review-queue", title: "صف بازبینی", value: pendingReviewCount, detail: "تغییرات قوانین" },
-    { href: "/admin/audit", title: "Audit log", value: auditCount, detail: "رویدادهای مدیریتی" }
+    {
+      href: "/admin/laws",
+      title: "قوانین و منابع",
+      value: lawCount,
+      detail: articleCount + " ماده · " + sourceCount + " منبع"
+    },
+    {
+      href: "/admin/lawyers",
+      title: "وکلا",
+      value: lawyerCount,
+      detail: "مدیریت تأیید و وضعیت"
+    },
+    {
+      href: "/admin/ai",
+      title: "هوش مصنوعی",
+      value: providerCount,
+      detail: "Provider و fallback"
+    },
+    {
+      href: "/admin/featured",
+      title: "سطح ویژه",
+      value: "مدیریت",
+      detail: "اولویت و اشتراک ویژه"
+    },
+    {
+      href: "/admin/review-queue",
+      title: "صف بازبینی",
+      value: pendingReviewCount,
+      detail: "تغییرات قوانین"
+    },
+    {
+      href: "/admin/audit",
+      title: "Audit log",
+      value: auditCount,
+      detail: "رویدادهای مدیریتی"
+    }
   ];
 
   return (

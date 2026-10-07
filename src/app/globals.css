@@ -36,17 +36,44 @@ body {
 }
 
 button,
+input,
+select,
 textarea {
   font: inherit;
 }
 
-button {
-  cursor: pointer;
+button,
+input,
+select,
+textarea {
   border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 9px 16px;
   background: transparent;
   color: var(--text);
+}
+
+button {
+  cursor: pointer;
+  border-radius: 999px;
+  padding: 9px 16px;
+}
+
+input,
+select,
+textarea {
+  width: 100%;
+  border-radius: 14px;
+  padding: 11px 12px;
+  outline: none;
+}
+
+textarea {
+  resize: vertical;
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: var(--accent);
 }
 
 button:disabled {
@@ -55,7 +82,7 @@ button:disabled {
 }
 
 .shell {
-  width: min(920px, calc(100% - 32px));
+  width: min(1040px, calc(100% - 32px));
   margin: 0 auto;
   padding: 64px 0 40px;
 }
@@ -71,7 +98,7 @@ button:disabled {
 }
 
 .hero p {
-  max-width: 720px;
+  max-width: 760px;
   color: var(--muted);
 }
 
@@ -80,40 +107,39 @@ button:disabled {
   font-weight: 800;
 }
 
-.assistant-card {
+.assistant-card,
+.admin-table-wrap,
+.admin-editor,
+.admin-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 24px;
   padding: 24px;
+}
+
+.assistant-card {
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.06);
 }
 
-.assistant-card label {
+.assistant-card label,
+.admin-editor label {
   display: block;
   font-weight: 800;
-  margin: 18px 0 8px;
-}
-
-textarea {
-  width: 100%;
-  resize: vertical;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  padding: 14px;
-  background: transparent;
-  color: var(--text);
-  outline: none;
-}
-
-input:focus,\ntextarea:focus {
-  border-color: var(--accent);
+  margin: 14px 0 8px;
 }
 
 .mode-row,
-.actions {
+.actions,
+.status-controls,
+.inline-fields {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
+}
+
+.mode-row {
+  margin-bottom: 8px;
 }
 
 button.active,
@@ -126,6 +152,125 @@ button.active,
 
 .actions {
   margin-top: 16px;
+}
+
+.form-grid,
+.admin-grid,
+.admin-editor-grid,
+.lawyer-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.form-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.admin-grid {
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.admin-editor-grid {
+  grid-template-columns: repeat(auto-fit, minmax(290px, 1fr));
+}
+
+.admin-card {
+  color: var(--text);
+  text-decoration: none;
+  display: grid;
+  gap: 6px;
+}
+
+.admin-card:hover,
+.lawyer-card:hover {
+  border-color: var(--accent);
+}
+
+.admin-card b {
+  font-size: 2rem;
+}
+
+.admin-card small,
+.source-row small,
+.lawyer-card small,
+.lawyer-card p {
+  color: var(--muted);
+}
+
+.admin-stack {
+  display: grid;
+  gap: 24px;
+}
+
+.admin-table-wrap {
+  overflow-x: auto;
+}
+
+.admin-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.admin-table th,
+.admin-table td {
+  text-align: right;
+  padding: 10px 12px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: top;
+}
+
+.admin-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.editor-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.article-editor,
+.preview-box,
+.source-row {
+  margin-top: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 14px;
+}
+
+.source-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.source-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.source-row > div:first-child {
+  display: grid;
+  gap: 2px;
+}
+
+.source-row a {
+  overflow-wrap: anywhere;
+}
+
+.check-row,
+.status-controls label {
+  display: inline-flex !important;
+  align-items: center;
+  gap: 6px;
+  margin: 0 !important;
+}
+
+.check-row input,
+.status-controls input {
+  width: auto;
 }
 
 .answer {
@@ -176,9 +321,7 @@ footer {
 }
 
 .lawyer-grid {
-  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
   margin-bottom: 20px;
 }
 
@@ -191,18 +334,9 @@ footer {
   text-decoration: none;
 }
 
-.lawyer-card:hover {
-  border-color: var(--accent);
-}
-
 .lawyer-card strong {
   display: inline-block;
   margin-inline-end: 8px;
-}
-
-.lawyer-card small,
-.lawyer-card p {
-  color: var(--muted);
 }
 
 .verified,
@@ -217,4 +351,23 @@ footer {
 
 .sponsored {
   color: var(--accent);
+}
+
+@media (max-width: 640px) {
+  .shell {
+    width: min(100% - 20px, 1040px);
+    padding-top: 32px;
+  }
+
+  .assistant-card,
+  .admin-table-wrap,
+  .admin-editor,
+  .admin-card {
+    border-radius: 18px;
+    padding: 16px;
+  }
+
+  .source-row {
+    display: grid;
+  }
 }
