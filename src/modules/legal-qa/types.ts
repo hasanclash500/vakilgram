@@ -1,3 +1,5 @@
+import type { LawyerRecommendationSet } from "@/modules/lawyers/types";
+
 export type AnswerMode = "simple" | "expert";
 
 export interface RetrievedArticle {
@@ -25,6 +27,7 @@ export interface LegalAnswer {
   summary: string;
   legalArea: string | null;
   sources: LegalSource[];
+  lawyers: LawyerRecommendationSet;
   disclaimer: string;
   documented: boolean;
 }
