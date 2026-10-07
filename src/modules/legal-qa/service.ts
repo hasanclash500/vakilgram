@@ -3,7 +3,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { normalizePersian } from "@/lib/text/normalize-persian";
 import { loadLlmRegistry } from "@/providers/llm/registry";
 import { validateCitationIds } from "./citation-validator";
-import { retrieveByText } from "./retrieval";
+import { retrieveHybrid } from "./retrieval";
 import type { AnswerMode, LegalAnswer } from "./types";
 
 const llmOutputSchema = z.object({
@@ -35,7 +35,7 @@ export async function answerLegalQuestion(
   const normalizedQuestion = normalizePersian(question);
   const disclaimer = process.env.LEGAL_DISCLAIMER ?? DEFAULT_DISCLAIMER;
 
-  const articles = await retrieveByText(prisma, normalizedQuestion, 12);
+  const articles = await retrieveHybrid(prisma, normalizedQuestion, 12);
   if (articles.length === 0) {
     return noSourceAnswer(disclaimer);
   }
@@ -91,7 +91,9 @@ export async function answerLegalQuestion(
     return noSourceAnswer(disclaimer);
   }
 
-  const byId = new Map(articles.map((article) => [article.id, article]));
+  const byId = new Map(
+    articles.map((article) => [article.id, article])
+  );
 
   return {
     answer: result.answer,
