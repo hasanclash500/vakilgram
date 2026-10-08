@@ -5,6 +5,7 @@ import { safeJsonLd } from "@/lib/seo/safe-json-ld";
 import { isHttpUrl } from "@/lib/url/http";
 import { featureEnabled } from "@/lib/features";
 import { StartLawyerChat } from "@/app/components/start-lawyer-chat";
+import { getLawyerReviewSummary } from "@/modules/reviews/service";
 
 export const dynamic = "force-dynamic";
 
@@ -65,6 +66,36 @@ export default async function LawyerProfilePage({
   const lawyer = await getLawyer(slug);
   if (!lawyer) notFound();
 
+  const reviewsEnabled = featureEnabled("REVIEWS");
+  const prisma = getPrisma();
+
+  const [reviewSummary, reviews] = reviewsEnabled
+    ? await Promise.all([
+        getLawyerReviewSummary(prisma, lawyer.id),
+        prisma.review.findMany({
+          where: {
+            lawyerId: lawyer.id,
+            hiddenAt: null
+          },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+          include: {
+            user: {
+              select: { name: true }
+            }
+          }
+        })
+      ])
+    : [
+        {
+          count: 0,
+          average: null,
+          bayesian: null,
+          priorAverage: 3
+        },
+        []
+      ];
+
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Person",
@@ -79,6 +110,17 @@ export default async function LawyerProfilePage({
     },
     ...(lawyer.avatarUrl && isHttpUrl(lawyer.avatarUrl)
       ? { image: lawyer.avatarUrl }
+      : {}),
+    ...(reviewSummary.count > 0 && reviewSummary.average !== null
+      ? {
+          aggregateRating: {
+            "@type": "AggregateRating",
+            ratingValue: reviewSummary.average,
+            reviewCount: reviewSummary.count,
+            bestRating: 5,
+            worstRating: 1
+          }
+        }
       : {})
   };
 
@@ -111,6 +153,30 @@ export default async function LawyerProfilePage({
           <>
             <h2>درباره وکیل</h2>
             <p>{lawyer.bio}</p>
+          </>
+        )}
+
+        {reviewsEnabled && reviewSummary.count > 0 && (
+          <>
+            <h2>امتیاز کاربران</h2>
+            <p className="rating-summary">
+              <strong>{reviewSummary.bayesian} از ۵</strong>
+              {" · "}
+              {reviewSummary.count} نظر تأییدشده از تعامل واقعی
+            </p>
+
+            <div className="review-list">
+              {reviews.map((review) => (
+                <article className="review-card" key={review.id}>
+                  <strong>{review.rating} از ۵</strong>
+                  <small>
+                    {review.user?.name ?? "کاربر تأییدشده"} ·{" "}
+                    {review.createdAt.toLocaleDateString("fa-IR")}
+                  </small>
+                  {review.comment && <p>{review.comment}</p>}
+                </article>
+              ))}
+            </div>
           </>
         )}
 
