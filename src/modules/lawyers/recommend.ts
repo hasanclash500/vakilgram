@@ -1,4 +1,5 @@
 import type { PrismaClient } from "@/generated/prisma/client";
+import { featureEnabled } from "@/lib/features";
 import { rotateSelection } from "@/modules/ads/rotation";
 import type {
   LawyerRecommendation,
@@ -15,7 +16,14 @@ function toCard(
     avatarUrl: string | null;
     verified: boolean;
     specialties: Array<{ area: string }>;
-    featured: Array<{ tier: { name: string; priority: number } }>;
+    featured: Array<{
+      tier: {
+        name: string;
+        priority: number;
+        costPerClick: bigint;
+      };
+    }>;
+    wallet: { balance: bigint } | null;
   },
   sponsored: boolean
 ): LawyerRecommendation {
@@ -43,6 +51,8 @@ export async function recommendLawyers(
   city?: string | null,
   now = new Date()
 ): Promise<LawyerRecommendationSet> {
+  const walletEnabled = featureEnabled("WALLET");
+
   const candidates = await prisma.lawyer.findMany({
     where: {
       active: true,
@@ -64,6 +74,9 @@ export async function recommendLawyers(
       specialties: {
         select: { area: true }
       },
+      wallet: {
+        select: { balance: true }
+      },
       featured: {
         where: {
           active: true,
@@ -78,7 +91,8 @@ export async function recommendLawyers(
           tier: {
             select: {
               name: true,
-              priority: true
+              priority: true,
+              costPerClick: true
             }
           }
         }
@@ -87,20 +101,34 @@ export async function recommendLawyers(
     take: 40
   });
 
-  const featured = candidates
-    .filter((lawyer) => lawyer.featured.length > 0)
-    .sort((a, b) => {
-      const aPriority = Math.max(
-        ...a.featured.map((item) => item.tier.priority)
-      );
-      const bPriority = Math.max(
-        ...b.featured.map((item) => item.tier.priority)
-      );
-      return bPriority - aPriority;
-    });
+  const eligibleFeatured = candidates.filter((lawyer) => {
+    if (lawyer.featured.length === 0) return false;
+    if (!walletEnabled) return true;
+
+    const tier = lawyer.featured
+      .map((item) => item.tier)
+      .sort((a, b) => b.priority - a.priority)[0];
+
+    const cost = tier?.costPerClick ?? 0n;
+    return cost === 0n || (lawyer.wallet?.balance ?? 0n) >= cost;
+  });
+
+  const featuredIds = new Set(
+    eligibleFeatured.map((lawyer) => lawyer.id)
+  );
+
+  const featured = eligibleFeatured.sort((a, b) => {
+    const aPriority = Math.max(
+      ...a.featured.map((item) => item.tier.priority)
+    );
+    const bPriority = Math.max(
+      ...b.featured.map((item) => item.tier.priority)
+    );
+    return bPriority - aPriority;
+  });
 
   const organic = candidates.filter(
-    (lawyer) => lawyer.featured.length === 0
+    (lawyer) => !featuredIds.has(lawyer.id)
   );
 
   const hourlyOffset = Math.floor(
