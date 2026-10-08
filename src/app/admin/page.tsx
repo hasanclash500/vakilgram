@@ -74,6 +74,12 @@ export default async function AdminPage() {
       detail: "تغییرات قوانین"
     },
     {
+      href: "/admin/reviews",
+      title: "نظرات وکلا",
+      value: "مدیریت",
+      detail: "پنهان‌سازی فقط با دلیل ثبت‌شده"
+    },
+    {
       href: "/admin/audit",
       title: "Audit log",
       value: auditCount,
