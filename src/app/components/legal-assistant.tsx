@@ -40,6 +40,11 @@ function LawyerCard({
         {lawyer.city}
         {lawyer.province ? `، ${lawyer.province}` : ""}
       </small>
+      {lawyer.rating !== null && (
+        <small className="rating-summary">
+          ★ {lawyer.rating} از ۵ · {lawyer.reviewCount} نظر
+        </small>
+      )}
       {lawyer.specialties.length > 0 && (
         <p>{lawyer.specialties.join(" · ")}</p>
       )}
