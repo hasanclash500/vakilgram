@@ -445,3 +445,32 @@ footer {
 .law-article-text {
   white-space: pre-wrap;
 }
+
+
+.version-list {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.version-item {
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+
+.version-item:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.version-item small {
+  display: block;
+  color: var(--muted);
+}
+
+.version-item code {
+  display: block;
+  overflow-wrap: anywhere;
+  color: var(--muted);
+  font-size: 0.78rem;
+}

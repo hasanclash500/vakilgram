@@ -72,6 +72,12 @@ export default async function AdminPage() {
       title: "Audit log",
       value: auditCount,
       detail: "رویدادهای مدیریتی"
+    },
+    {
+      href: "/admin/maintenance",
+      title: "نگهداری",
+      value: "DB",
+      detail: "پاکسازی داده‌های موقت و telemetry"
     }
   ];
 
