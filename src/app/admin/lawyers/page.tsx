@@ -5,6 +5,7 @@ import {
   ExistingLawyerEditor,
   NewLawyerForm
 } from "../components/lawyer-profile-form";
+import { LawyerCsvImport } from "../components/lawyer-csv-import";
 import { getAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
 
@@ -138,6 +139,7 @@ export default async function AdminLawyersPage({
 
       <div className="admin-stack">
         <NewLawyerForm />
+        <LawyerCsvImport />
 
         <section className="assistant-card">
           <h2>جست‌وجو و فیلتر وکلا</h2>
