@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import { getPrisma } from "../../src/lib/db/prisma";
 import { consumeLegalAskRateLimit } from "../../src/lib/rate-limit/legal-ask";
+import { consumeAdminTwoFactorRateLimit } from "../../src/modules/auth/admin-2fa-rate-limit";
 import { cleanupOperationalData } from "../../src/modules/maintenance/cleanup-service";
 import { recordSponsoredClick } from "../../src/modules/ads/click-service";
 import { adjustWallet } from "../../src/modules/ads/wallet-service";
@@ -236,6 +237,22 @@ async function main() {
   assert.equal(secondRate.allowed, true);
   assert.equal(thirdRate.allowed, false);
   assert.equal(thirdRate.remaining, 0);
+
+  const twoFactorAttempts = [];
+  for (let index = 0; index < 6; index += 1) {
+    twoFactorAttempts.push(
+      await consumeAdminTwoFactorRateLimit(
+        prisma,
+        "ci-admin-rate-limit",
+        fixedNow
+      )
+    );
+  }
+
+  assert.equal(twoFactorAttempts[0]?.allowed, true);
+  assert.equal(twoFactorAttempts[4]?.allowed, true);
+  assert.equal(twoFactorAttempts[5]?.allowed, false);
+  assert.equal(twoFactorAttempts[5]?.remaining, 0);
 
   const sponsoredLawyer = await prisma.lawyer.create({
     data: {
