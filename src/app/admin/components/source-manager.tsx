@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { SourceAdapterEditor } from "./source-adapter-editor";
 
 type SourceRow = {
   id: string;
@@ -9,6 +10,8 @@ type SourceRow = {
   sourceType: string;
   official: boolean;
   enabled: boolean;
+  adapterFormat: "json" | "csv" | null;
+  updateUrl: string;
 };
 
 export function SourceManager({
@@ -43,7 +46,14 @@ export function SourceManager({
       return;
     }
 
-    setSources((current) => [...current, body.source]);
+    setSources((current) => [
+      ...current,
+      {
+        ...body.source,
+        adapterFormat: null,
+        updateUrl: ""
+      }
+    ]);
     setName("");
     setBaseUrl("");
     setMessage("منبع رسمی اضافه شد.");
@@ -142,6 +152,14 @@ export function SourceManager({
                 فعال
               </label>
             </div>
+
+            <SourceAdapterEditor
+              sourceId={source.id}
+              sourceName={source.name}
+              initialFormat={source.adapterFormat}
+              initialUpdateUrl={source.updateUrl}
+              canRefresh={source.official && source.enabled}
+            />
           </article>
         ))}
       </div>
