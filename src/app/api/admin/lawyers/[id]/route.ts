@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/url/http";
 import { adminAccessError } from "@/lib/auth/api";
 import { requireAdminUser } from "@/lib/auth/admin";
 import { writeAudit } from "@/lib/audit/write-audit";
@@ -7,7 +8,7 @@ import { getPrisma } from "@/lib/db/prisma";
 
 const socialLinkSchema = z.object({
   platform: z.string().trim().min(1).max(40),
-  url: z.string().url().max(500)
+  url: z.string().trim().url().max(500).refine(isHttpUrl, "URL must use HTTP(S)")
 });
 
 const schema = z.object({
@@ -17,7 +18,7 @@ const schema = z.object({
   city: z.string().trim().min(2).max(100).optional(),
   province: z.string().trim().max(100).nullable().optional(),
   bio: z.string().trim().max(5000).nullable().optional(),
-  avatarUrl: z.string().url().max(500).nullable().optional(),
+  avatarUrl: z.string().trim().url().max(500).refine(isHttpUrl, "URL must use HTTP(S)").nullable().optional(),
   verified: z.boolean().optional(),
   active: z.boolean().optional(),
   specialties: z.array(z.string().trim().min(1).max(100)).max(30).optional(),
