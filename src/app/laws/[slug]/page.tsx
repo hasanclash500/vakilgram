@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/db/prisma";
 import { LAW_STATUS_LABELS } from "@/modules/laws/status";
+import { isHttpUrl } from "@/lib/url/http";
 
 export const dynamic = "force-dynamic";
 
@@ -81,7 +82,7 @@ export default async function LawPage({
         </div>
         <p>
           منبع: {law.source.name}
-          {law.sourceUrl && (
+          {law.sourceUrl && isHttpUrl(law.sourceUrl) && (
             <>
               {" · "}
               <a
@@ -113,7 +114,7 @@ export default async function LawPage({
               {article.title ? " — " + article.title : ""}
             </h2>
             <p className="law-article-text">{article.text}</p>
-            {article.sourceUrl && (
+            {article.sourceUrl && isHttpUrl(article.sourceUrl) && (
               <a
                 href={article.sourceUrl}
                 target="_blank"
