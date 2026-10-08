@@ -52,12 +52,14 @@ export async function POST(request: Request) {
       );
     }
 
+    console.error("admin-lawyer-bulk-import-failed", {
+      name: error instanceof Error ? error.name : "unknown"
+    });
+
     return NextResponse.json(
       {
         error:
-          error instanceof Error
-            ? "ورود گروهی انجام نشد: " + error.message
-            : "ورود گروهی انجام نشد."
+          "ورود گروهی انجام نشد. ساختار CSV، یکتایی Slug و شماره پروانه را بررسی کنید."
       },
       { status: 400 }
     );
