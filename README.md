@@ -2,7 +2,7 @@
 
 پلتفرم فارسی RTL برای پاسخ حقوقی مستند، دستیار صوتی و معرفی وکلای تأییدشده.
 
-> وضعیت: توسعه فاز ۱ روی شاخه `main` انجام می‌شود.
+> وضعیت: کد فاز ۱ در نسخه `0.1.0` کامل شده و برای استقرار نیازمند تنظیم Environment و ورود داده حقوقی واقعی است.
 
 ## پشته فنی
 
@@ -14,6 +14,7 @@
 - Zod
 - Vitest
 - GitHub Actions
+- Playwright
 
 ## قابلیت‌های فاز ۱
 
@@ -69,6 +70,7 @@
 ترتیب migrationها:
 - `0000_extensions`: فعال‌سازی pgvector
 - `0001_initial_schema`: schema کامل و GIN index جست‌وجوی متنی
+- `0002_api_rate_limits`: rate limit پایدار API پرسش حقوقی
 
 سپس برنامه را build کنید:
 
@@ -84,6 +86,8 @@
 - `npm run typecheck`
 - `npm test`
 - `npm run build`
+- `npm run test:e2e` برای smoke test مرورگر
+- `npm run test:integration` روی PostgreSQL+pgvector واقعی
 
 روی هر push به `main` و Pull Request، GitHub Actions این موارد را اجرا می‌کند و dependencyهای runtime را برای آسیب‌پذیری High/Critical audit می‌کند.
 
@@ -109,3 +113,9 @@
 ## آمادگی انتشار
 
 صفحه `/admin/maintenance` بدون نمایش secretها وضعیت Source رسمی، مواد قانونی، LLM، Embedding، Voice، Auth، HMAC مرورگر، SITE_URL و وکلای تأییدشده را نشان می‌دهد. این صفحه همچنین شمارنده داده‌های موقت و پاکسازی دستی rate-limit/AI telemetry را در اختیار ادمین قرار می‌دهد.
+
+
+## وضعیت نسخه
+
+- جزئیات فاز ۱: `docs/PHASE1_STATUS.md`
+- تاریخچه تغییرات: `CHANGELOG.md`
