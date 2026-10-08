@@ -1,7 +1,17 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getPrisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "وکلای تأییدشده",
+  description:
+    "دایرکتوری وکلای تأییدشده و فعال ثبت‌شده در وکیل‌گرام",
+  alternates: {
+    canonical: "/lawyers"
+  }
+};
 
 export default async function LawyersPage({
   searchParams

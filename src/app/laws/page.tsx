@@ -1,8 +1,18 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { getPrisma } from "@/lib/db/prisma";
 import { LAW_STATUS_LABELS } from "@/modules/laws/status";
 
 export const dynamic = "force-dynamic";
+
+export const metadata: Metadata = {
+  title: "قوانین و مقررات",
+  description:
+    "مرور قوانین و مواد ثبت‌شده از منابع رسمی و فعال در وکیل‌گرام",
+  alternates: {
+    canonical: "/laws"
+  }
+};
 
 export default async function LawsPage({
   searchParams

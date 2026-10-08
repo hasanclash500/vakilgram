@@ -38,13 +38,19 @@ export async function generateMetadata({
   const law = await getLaw(slug);
 
   if (!law) {
-    return { title: "قانون پیدا نشد | وکیل‌گرام" };
+    return {
+      title: "قانون پیدا نشد",
+      robots: { index: false, follow: false }
+    };
   }
 
   return {
-    title: law.title + " | وکیل‌گرام",
+    title: law.title,
     description:
-      "متن مواد " + law.title + " بر اساس منبع رسمی ثبت‌شده در وکیل‌گرام"
+      "متن مواد " + law.title + " بر اساس منبع رسمی ثبت‌شده در وکیل‌گرام",
+    alternates: {
+      canonical: "/laws/" + law.slug
+    }
   };
 }
 

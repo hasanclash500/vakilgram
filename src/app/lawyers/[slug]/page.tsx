@@ -34,14 +34,20 @@ export async function generateMetadata({
   const lawyer = await getLawyer(slug);
 
   if (!lawyer) {
-    return { title: "وکیل پیدا نشد | وکیل‌گرام" };
+    return {
+      title: "وکیل پیدا نشد",
+      robots: { index: false, follow: false }
+    };
   }
 
   return {
-    title: `${lawyer.fullName} | وکیل‌گرام`,
+    title: lawyer.fullName,
     description:
       lawyer.bio?.slice(0, 150) ??
-      `پروفایل وکیل تأییدشده در ${lawyer.city}`
+      `پروفایل وکیل تأییدشده در ${lawyer.city}`,
+    alternates: {
+      canonical: "/lawyers/" + lawyer.slug
+    }
   };
 }
 

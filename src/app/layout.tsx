@@ -9,10 +9,7 @@ export const metadata: Metadata = {
     template: "%s | وکیل‌گرام"
   },
   description:
-    "دستیار حقوقی فارسی با پاسخ مستند به قوانین و مقررات و معرفی وکلا",
-  alternates: {
-    canonical: "/"
-  }
+    "دستیار حقوقی فارسی با پاسخ مستند به قوانین و مقررات و معرفی وکلا"
 };
 
 export default function RootLayout({
