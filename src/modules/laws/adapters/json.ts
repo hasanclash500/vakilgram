@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/url/http";
 import type {
   LawDocumentInput,
   LawSourceAdapter
@@ -8,13 +9,13 @@ const articleSchema = z.object({
   number: z.string().trim().min(1),
   title: z.string().trim().nullable().optional(),
   text: z.string().trim().min(1),
-  sourceUrl: z.string().url().nullable().optional()
+  sourceUrl: z.string().trim().url().refine(isHttpUrl, "URL must use HTTP(S)").nullable().optional()
 });
 
 const lawSchema = z.object({
   title: z.string().trim().min(1),
   slug: z.string().trim().min(1),
-  sourceUrl: z.string().url().nullable().optional(),
+  sourceUrl: z.string().trim().url().refine(isHttpUrl, "URL must use HTTP(S)").nullable().optional(),
   enactedAt: z.string().datetime().nullable().optional(),
   effectiveAt: z.string().datetime().nullable().optional(),
   status: z
