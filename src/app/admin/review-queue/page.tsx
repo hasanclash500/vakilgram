@@ -1,27 +1,43 @@
 import type { Prisma } from "@/generated/prisma/client";
 import Link from "next/link";
 import { redirect } from "next/navigation";
+import { ReviewDecisionButtons } from "../components/review-decision-buttons";
 import { getAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
 
 export const dynamic = "force-dynamic";
 
-function versionFromJson(value: Prisma.JsonValue | null): number | null {
+function recordValue(
+  value: Prisma.JsonValue | null
+): Record<string, unknown> | null {
   if (!value || Array.isArray(value) || typeof value !== "object") {
     return null;
   }
-
-  const version = (value as Record<string, unknown>).version;
-  return typeof version === "number" ? version : null;
+  return value as Record<string, unknown>;
 }
 
-function checksumFromJson(value: Prisma.JsonValue | null): string | null {
-  if (!value || Array.isArray(value) || typeof value !== "object") {
-    return null;
-  }
+function numberValue(
+  value: Prisma.JsonValue | null,
+  key: string
+): number | null {
+  const record = recordValue(value);
+  const item = record?.[key];
+  return typeof item === "number" ? item : null;
+}
 
-  const checksum = (value as Record<string, unknown>).checksum;
-  return typeof checksum === "string" ? checksum : null;
+function stringValue(
+  value: Prisma.JsonValue | null,
+  key: string
+): string | null {
+  const record = recordValue(value);
+  const item = record?.[key];
+  return typeof item === "string" ? item : null;
+}
+
+function previewJson(value: Prisma.JsonValue | null): string {
+  if (value === null) return "—";
+  const text = JSON.stringify(value, null, 2);
+  return text.length > 6000 ? text.slice(0, 6000) + "\n…" : text;
 }
 
 export default async function ReviewQueuePage() {
@@ -39,7 +55,11 @@ export default async function ReviewQueuePage() {
   const articleIds = [
     ...new Set(
       items
-        .filter((item) => item.kind === "ARTICLE_UPDATE")
+        .filter(
+          (item) =>
+            item.kind === "ARTICLE_UPDATE" ||
+            item.kind === "ARTICLE_UPDATE_STAGED"
+        )
         .map((item) => item.entityId)
     )
   ];
@@ -72,24 +92,31 @@ export default async function ReviewQueuePage() {
 
       <header className="hero">
         <span className="eyebrow">صف بازبینی</span>
-        <h1>تغییرات نیازمند بررسی</h1>
+        <h1>تغییرات قوانین</h1>
         <p>
-          در فاز ۱ این صفحه فقط برای مشاهده و مقایسه نسخه‌هاست. تأیید،
-          رد یا rollback خودکار در فاز بعدی فعال می‌شود تا تغییر حقوقی
-          بدون فرآیند بازبینی کامل برگشت داده نشود.
+          تغییراتی که از Adapter فاز ۲ می‌آیند قبل از انتشار در این صف
+          متوقف می‌شوند. تأیید، نسخه جدید را اعمال و ایندکس را بازسازی
+          می‌کند؛ رد کردن متن جاری قانون را تغییر نمی‌دهد.
         </p>
       </header>
 
       <section className="review-list">
         {items.map((item) => {
           const article = articleById.get(item.entityId);
-          const beforeVersion = versionFromJson(item.beforeData);
-          const afterVersion = versionFromJson(item.afterData);
-          const before = article?.versions.find(
-            (version) => version.version === beforeVersion
+          const staged = item.kind.endsWith("_STAGED");
+          const legacyBeforeVersion = numberValue(
+            item.beforeData,
+            "version"
           );
-          const after = article?.versions.find(
-            (version) => version.version === afterVersion
+          const legacyAfterVersion = numberValue(
+            item.afterData,
+            "version"
+          );
+          const beforeVersion = article?.versions.find(
+            (version) => version.version === legacyBeforeVersion
+          );
+          const afterVersion = article?.versions.find(
+            (version) => version.version === legacyAfterVersion
           );
 
           return (
@@ -126,35 +153,51 @@ export default async function ReviewQueuePage() {
                 )}
               </header>
 
-              {article && before && after ? (
+              {staged ? (
+                <>
+                  <div className="review-diff">
+                    <section className="review-version">
+                      <h3>وضعیت فعلی</h3>
+                      <pre>{previewJson(item.beforeData)}</pre>
+                    </section>
+                    <section className="review-version">
+                      <h3>پیشنهاد Adapter</h3>
+                      <pre>{previewJson(item.afterData)}</pre>
+                    </section>
+                  </div>
+
+                  {item.status === "PENDING" && (
+                    <ReviewDecisionButtons reviewId={item.id} />
+                  )}
+                </>
+              ) : article && beforeVersion && afterVersion ? (
                 <div className="review-diff">
                   <section className="review-version">
-                    <h3>قبل · نسخه {before.version}</h3>
-                    <div className="review-meta">
-                      checksum:{" "}
-                      {checksumFromJson(item.beforeData)?.slice(0, 16) ??
-                        before.checksum.slice(0, 16)}
-                      …
-                    </div>
-                    <pre>{before.text}</pre>
+                    <h3>قبل · نسخه {beforeVersion.version}</h3>
+                    <pre>{beforeVersion.text}</pre>
                   </section>
-
                   <section className="review-version">
-                    <h3>بعد · نسخه {after.version}</h3>
-                    <div className="review-meta">
-                      checksum:{" "}
-                      {checksumFromJson(item.afterData)?.slice(0, 16) ??
-                        after.checksum.slice(0, 16)}
-                      …
-                    </div>
-                    <pre>{after.text}</pre>
+                    <h3>بعد · نسخه {afterVersion.version}</h3>
+                    <pre>{afterVersion.text}</pre>
                   </section>
                 </div>
               ) : (
                 <p className="disclaimer">
-                  نسخه‌های لازم برای مقایسه این رکورد در دسترس نیستند.
+                  این رکورد قدیمی است یا داده کافی برای مقایسه ندارد.
                 </p>
               )}
+
+              {staged &&
+                stringValue(item.afterData, "expectedChecksum") && (
+                  <small>
+                    stale guard:{" "}
+                    {stringValue(
+                      item.afterData,
+                      "expectedChecksum"
+                    )?.slice(0, 16)}
+                    …
+                  </small>
+                )}
             </article>
           );
         })}
