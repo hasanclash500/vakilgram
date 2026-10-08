@@ -8,6 +8,7 @@ import {
 import type { LegalAnswer } from "@/modules/legal-qa/types";
 import type { LawyerRecommendation } from "@/modules/lawyers/types";
 import { LAW_STATUS_LABELS } from "@/modules/laws/status";
+import { isHttpUrl } from "@/lib/url/http";
 
 function LawyerCard({
   lawyer
@@ -252,7 +253,7 @@ export function LegalAssistant() {
                       >
                         مشاهده ماده در وکیل‌گرام
                       </a>
-                      {source.sourceUrl && (
+                      {source.sourceUrl && isHttpUrl(source.sourceUrl) && (
                         <a
                           href={source.sourceUrl}
                           target="_blank"
