@@ -78,7 +78,11 @@ export default async function AdminLawsPage() {
             <tbody>
               {laws.map((law) => (
                 <tr key={law.id}>
-                  <td>{law.title}</td>
+                  <td>
+                    <Link href={"/admin/laws/" + law.id}>
+                      {law.title}
+                    </Link>
+                  </td>
                   <td>{law.source.name}</td>
                   <td>{law._count.articles}</td>
                   <td>{law.status}</td>
