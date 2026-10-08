@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: write
+  contents: read
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -42,22 +42,10 @@ jobs:
         with:
           node-version: 22
           cache: npm
-      - run: npm install
+      - run: npm ci
       - run: npx playwright install --with-deps chromium
       - run: npm run db:generate
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
       - run: npm run test:e2e
-      - name: Commit updated lockfile
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        run: |
-          git config user.name "vakilgram-ci"
-          git config user.email "vakilgram-ci@users.noreply.github.com"
-          git add package-lock.json
-          if git diff --cached --quiet; then
-            echo "package-lock.json already current."
-          else
-            git commit -m "chore: lock Playwright test dependency"
-            git push
-          fi
