@@ -5,6 +5,8 @@ import { cleanupOperationalData } from "../../src/modules/maintenance/cleanup-se
 import { recordSponsoredClick } from "../../src/modules/ads/click-service";
 import { adjustWallet } from "../../src/modules/ads/wallet-service";
 import { importLawDocument } from "../../src/modules/laws/import-service";
+import { stageLawDocumentUpdate } from "../../src/modules/laws/source-update-service";
+import { reviewStagedLawChange } from "../../src/modules/laws/review-service";
 import { retrieveByText } from "../../src/modules/legal-qa/retrieval";
 import {
   closeConversation,
@@ -133,6 +135,85 @@ async function main() {
   });
 
   assert.equal(reviewCount, 1);
+
+  const stagedInitial = await importLawDocument(prisma, official.id, {
+    title: "CI TEST - staged law",
+    slug: "ci-test-staged-law",
+    status: "ACTIVE",
+    articles: [
+      {
+        number: "1",
+        text: "CI TEST staged version one"
+      }
+    ]
+  });
+
+  const stagedRun = await prisma.ingestionRun.create({
+    data: {
+      sourceId: official.id,
+      status: "RUNNING",
+      startedAt: new Date()
+    }
+  });
+
+  const stagedResult = await stageLawDocumentUpdate(
+    prisma,
+    official.id,
+    stagedRun.id,
+    {
+      title: "CI TEST - staged law",
+      slug: "ci-test-staged-law",
+      status: "AMENDED",
+      articles: [
+        {
+          number: "1",
+          text: "CI TEST staged version two"
+        }
+      ]
+    }
+  );
+
+  assert.equal(stagedInitial.createdArticles, 1);
+  assert.ok(stagedResult.queued >= 1);
+
+  const beforeApproval = await prisma.article.findFirstOrThrow({
+    where: {
+      law: { slug: "ci-test-staged-law" },
+      number: "1"
+    }
+  });
+
+  assert.equal(beforeApproval.currentVersion, 1);
+  assert.equal(beforeApproval.text, "CI TEST staged version one");
+
+  const stagedReview = await prisma.reviewQueue.findFirstOrThrow({
+    where: {
+      kind: "ARTICLE_UPDATE_STAGED",
+      entityId: beforeApproval.id,
+      status: "PENDING"
+    }
+  });
+
+  await reviewStagedLawChange(
+    prisma,
+    stagedReview.id,
+    "ci-test-admin",
+    "approve"
+  );
+
+  const afterApproval = await prisma.article.findUniqueOrThrow({
+    where: { id: beforeApproval.id },
+    include: {
+      versions: {
+        orderBy: { version: "asc" }
+      },
+      law: true
+    }
+  });
+
+  assert.equal(afterApproval.currentVersion, 2);
+  assert.equal(afterApproval.versions.length, 2);
+  assert.equal(afterApproval.text, "CI TEST staged version two");
 
   const fixedNow = new Date("2026-10-08T08:00:00.000Z");
   const firstRate = await consumeLegalAskRateLimit(
