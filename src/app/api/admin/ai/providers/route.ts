@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/url/http";
 import { adminAccessError } from "@/lib/auth/api";
 import { requireAdminUser } from "@/lib/auth/admin";
 import { writeAudit } from "@/lib/audit/write-audit";
@@ -8,7 +9,7 @@ import { getPrisma } from "@/lib/db/prisma";
 const schema = z.object({
   kind: z.enum(["LLM", "EMBEDDING"]),
   name: z.string().trim().min(2).max(100),
-  baseUrl: z.string().url().max(500),
+  baseUrl: z.string().trim().url().max(500).refine(isHttpUrl, "URL must use HTTP(S)"),
   model: z.string().trim().min(1).max(200),
   apiKeyEnv: z
     .string()
