@@ -1,5 +1,6 @@
 import type { PrismaClient } from "@/generated/prisma/client";
 import { loadConfiguredEmbeddingProviders } from "@/providers/embedding/registry";
+import { providerErrorCode } from "@/providers/telemetry/error-code";
 
 export interface ArticleIndexingResult {
   textIndexed: number;
@@ -102,8 +103,7 @@ export async function indexArticles(
           providerConfigId: entry.configId,
           success: false,
           latencyMs: Date.now() - startedAt,
-          errorCode:
-            error instanceof Error ? error.message : "unknown error"
+          errorCode: providerErrorCode(error)
         });
       }
     }
