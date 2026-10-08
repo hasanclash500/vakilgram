@@ -18,6 +18,7 @@ import {
   createVerifiedReview,
   reviewEligibility
 } from "../../src/modules/reviews/service";
+import { importLawyerCsv } from "../../src/modules/lawyers/csv-import";
 
 const prisma = getPrisma();
 
@@ -506,6 +507,34 @@ async function main() {
     oneWayEligibility.reason,
     "no-two-way-interaction"
   );
+
+  const bulkImport = await importLawyerCsv(
+    prisma,
+    [
+      "full_name,slug,license_number,city,specialties,social_links",
+      '"CI TEST Bulk One",ci-test-bulk-one,CI-BULK-1,CI,"contracts|family","website|https://example.com"',
+      '"CI TEST Bulk Two",ci-test-bulk-two,CI-BULK-2,CI,"criminal",""'
+    ].join("\n")
+  );
+
+  assert.equal(bulkImport.created, 2);
+
+  const importedLawyers = await prisma.lawyer.findMany({
+    where: {
+      id: { in: bulkImport.lawyerIds }
+    },
+    include: {
+      specialties: true,
+      socialLinks: true
+    },
+    orderBy: { slug: "asc" }
+  });
+
+  assert.equal(importedLawyers.length, 2);
+  assert.equal(importedLawyers[0]?.verified, false);
+  assert.equal(importedLawyers[1]?.verified, false);
+  assert.equal(importedLawyers[0]?.specialties.length, 2);
+  assert.equal(importedLawyers[0]?.socialLinks.length, 1);
 
   const cleanupNow = new Date("2026-10-08T10:00:00.000Z");
 
