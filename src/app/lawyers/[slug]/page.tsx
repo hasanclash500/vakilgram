@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/db/prisma";
 import { safeJsonLd } from "@/lib/seo/safe-json-ld";
+import { isHttpUrl } from "@/lib/url/http";
 
 export const dynamic = "force-dynamic";
 
@@ -73,7 +74,9 @@ export default async function LawyerProfilePage({
         ? { addressRegion: lawyer.province }
         : {})
     },
-    ...(lawyer.avatarUrl ? { image: lawyer.avatarUrl } : {})
+    ...(lawyer.avatarUrl && isHttpUrl(lawyer.avatarUrl)
+      ? { image: lawyer.avatarUrl }
+      : {})
   };
 
   return (
@@ -112,7 +115,7 @@ export default async function LawyerProfilePage({
           <>
             <h2>پیوندها</h2>
             <div className="actions">
-              {lawyer.socialLinks.map((link) => (
+              {lawyer.socialLinks.filter((link) => isHttpUrl(link.url)).map((link) => (
                 <a
                   key={link.platform}
                   href={link.url}
