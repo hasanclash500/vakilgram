@@ -532,3 +532,28 @@ footer {
     grid-template-columns: 1fr;
   }
 }
+
+
+.readiness-summary {
+  margin-bottom: 20px;
+}
+
+.readiness-ok {
+  border-color: var(--accent);
+}
+
+.readiness-warn {
+  border-color: var(--danger);
+}
+
+.readiness-text-ok {
+  color: var(--accent);
+}
+
+.readiness-text-warn {
+  color: var(--danger);
+}
+
+.readiness-text-optional {
+  color: var(--muted);
+}
