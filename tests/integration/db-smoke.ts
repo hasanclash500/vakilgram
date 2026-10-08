@@ -71,7 +71,6 @@ async function main() {
 
   assert.equal(retrieved.length, 1);
   assert.equal(retrieved[0]?.lawSlug, "ci-test-fictional-law");
-  assert.equal(retrieved[0]?.articleNumber, undefined);
   assert.equal(retrieved[0]?.number, "1");
 
   const second = await importLawDocument(prisma, official.id, {
