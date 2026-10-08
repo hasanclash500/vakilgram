@@ -9,6 +9,8 @@ export interface LawyerRecommendation {
   specialties: string[];
   sponsored: boolean;
   tierName: string | null;
+  rating: number | null;
+  reviewCount: number;
 }
 
 export interface LawyerRecommendationSet {
