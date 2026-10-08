@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/db/prisma";
+import { safeJsonLd } from "@/lib/seo/safe-json-ld";
 
 export const dynamic = "force-dynamic";
 
@@ -129,7 +130,7 @@ export default async function LawyerProfilePage({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(structuredData)
+          __html: safeJsonLd(structuredData)
         }}
       />
     </main>
