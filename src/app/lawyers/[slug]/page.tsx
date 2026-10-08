@@ -3,6 +3,8 @@ import { notFound } from "next/navigation";
 import { getPrisma } from "@/lib/db/prisma";
 import { safeJsonLd } from "@/lib/seo/safe-json-ld";
 import { isHttpUrl } from "@/lib/url/http";
+import { featureEnabled } from "@/lib/features";
+import { StartLawyerChat } from "@/app/components/start-lawyer-chat";
 
 export const dynamic = "force-dynamic";
 
@@ -22,7 +24,8 @@ async function getLawyer(slug: string) {
           platform: true,
           url: true
         }
-      }
+      },
+      userId: true
     }
   });
 }
@@ -108,6 +111,16 @@ export default async function LawyerProfilePage({
           <>
             <h2>درباره وکیل</h2>
             <p>{lawyer.bio}</p>
+          </>
+        )}
+
+        {featureEnabled("CHAT") && lawyer.userId && (
+          <>
+            <h2>گفت‌وگوی متنی</h2>
+            <StartLawyerChat
+              lawyerId={lawyer.id}
+              lawyerName={lawyer.fullName}
+            />
           </>
         )}
 
