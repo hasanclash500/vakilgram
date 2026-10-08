@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import { featureEnabled } from "@/lib/features";
 import { getPrisma } from "@/lib/db/prisma";
+import { rankByBayesian, ratingStats } from "@/modules/reviews/ranking";
 
 export const dynamic = "force-dynamic";
 
@@ -20,23 +22,43 @@ export default async function LawyersPage({
 }) {
   const params = await searchParams;
   const city = params.city?.trim();
+  const reviewsEnabled = featureEnabled("REVIEWS");
+  const prisma = getPrisma();
 
-  const lawyers = await getPrisma().lawyer.findMany({
-    where: {
-      active: true,
-      verified: true,
-      ...(city ? { city } : {})
-    },
-    include: {
-      specialties: {
-        select: { area: true }
-      }
-    },
-    orderBy: {
-      fullName: "asc"
-    },
-    take: 50
-  });
+  const [lawyers, globalReviewAggregate] = await Promise.all([
+    prisma.lawyer.findMany({
+      where: {
+        active: true,
+        verified: true,
+        ...(city ? { city } : {})
+      },
+      include: {
+        specialties: {
+          select: { area: true }
+        },
+        reviews: {
+          where: { hiddenAt: null },
+          select: { rating: true }
+        }
+      },
+      orderBy: {
+        fullName: "asc"
+      },
+      take: 200
+    }),
+    reviewsEnabled
+      ? prisma.review.aggregate({
+          where: { hiddenAt: null },
+          _avg: { rating: true }
+        })
+      : Promise.resolve({ _avg: { rating: null } })
+  ]);
+
+  const priorAverage = globalReviewAggregate._avg.rating ?? 3;
+
+  const visibleLawyers = reviewsEnabled
+    ? rankByBayesian(lawyers, priorAverage, 0, 50)
+    : lawyers.slice(0, 50);
 
   return (
     <main className="shell">
@@ -64,30 +86,51 @@ export default async function LawyersPage({
       </form>
 
       <section className="lawyer-grid directory-grid">
-        {lawyers.map((lawyer) => (
-          <Link
-            key={lawyer.id}
-            className="lawyer-card"
-            href={`/lawyers/${lawyer.slug}`}
-          >
-            <strong>{lawyer.fullName}</strong>
-            <span className="verified">تأییدشده</span>
-            <p>
-              {lawyer.city}
-              {lawyer.province ? `، ${lawyer.province}` : ""}
-            </p>
-            {lawyer.specialties.length > 0 && (
-              <small>
-                {lawyer.specialties
-                  .map((item) => item.area)
-                  .join(" · ")}
-              </small>
-            )}
-          </Link>
-        ))}
+        {visibleLawyers.map((lawyer) => {
+          const stats = reviewsEnabled
+            ? ratingStats(
+                lawyer.reviews.map((review) => review.rating),
+                priorAverage
+              )
+            : {
+                count: 0,
+                average: null,
+                bayesian: null
+              };
+
+          return (
+            <Link
+              key={lawyer.id}
+              className="lawyer-card"
+              href={`/lawyers/${lawyer.slug}`}
+            >
+              <strong>{lawyer.fullName}</strong>
+              <span className="verified">تأییدشده</span>
+              <p>
+                {lawyer.city}
+                {lawyer.province ? `، ${lawyer.province}` : ""}
+              </p>
+
+              {stats.count > 0 && stats.bayesian !== null && (
+                <small className="rating-summary">
+                  ★ {Math.round(stats.bayesian * 100) / 100} از ۵ ·{" "}
+                  {stats.count} نظر
+                </small>
+              )}
+
+              {lawyer.specialties.length > 0 && (
+                <small>
+                  {lawyer.specialties
+                    .map((item) => item.area)
+                    .join(" · ")}
+                </small>
+              )}
+            </Link>
+          );
+        })}
       </section>
 
-      {lawyers.length === 0 && (
+      {visibleLawyers.length === 0 && (
         <p className="disclaimer">
           وکیل تأییدشده‌ای با این فیلتر پیدا نشد.
         </p>
