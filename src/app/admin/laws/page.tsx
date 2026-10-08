@@ -4,6 +4,7 @@ import { getAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
 import { LawImportForm } from "../components/law-import-form";
 import { SourceManager } from "../components/source-manager";
+import { LawReindexButton } from "../components/law-reindex-button";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +51,7 @@ export default async function AdminLawsPage() {
 
       <div className="admin-stack">
         <SourceManager initialSources={allSources} />
+        <LawReindexButton />
 
         {importSources.length > 0 ? (
           <LawImportForm sources={importSources} />
