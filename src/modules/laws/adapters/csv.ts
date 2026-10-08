@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { isHttpUrl } from "@/lib/url/http";
 import type {
   LawDocumentInput,
   LawDocumentStatus,
@@ -68,7 +68,8 @@ function parseCsvRows(input: string): string[][] {
 function optionalUrl(value: string | undefined): string | null {
   const clean = value?.trim();
   if (!clean) return null;
-  return z.string().url().parse(clean);
+  if (!isHttpUrl(clean)) throw new Error("URL must use HTTP(S)");
+  return clean;
 }
 
 function optionalStatus(value: string | undefined): LawDocumentStatus | undefined {
