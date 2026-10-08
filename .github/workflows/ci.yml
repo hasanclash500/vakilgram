@@ -71,6 +71,8 @@ jobs:
       DIRECT_URL: postgresql://user:pass@127.0.0.1:5432/vakilgram
       LEGAL_ASK_RATE_LIMIT: "2"
       LEGAL_ASK_RATE_WINDOW_SECONDS: "600"
+      AUTH_SECRET: ci-database-auth-secret-not-for-production
+      ADMIN_2FA_COOKIE_SECRET: ci-admin-2fa-cookie-secret-not-for-production
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
