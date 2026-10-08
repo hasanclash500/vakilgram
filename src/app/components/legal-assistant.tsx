@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   browserSpeechToText,
   browserTextToSpeech
@@ -9,6 +9,7 @@ import type { LegalAnswer } from "@/modules/legal-qa/types";
 import type { LawyerRecommendation } from "@/modules/lawyers/types";
 import { LAW_STATUS_LABELS } from "@/modules/laws/status";
 import { isHttpUrl } from "@/lib/url/http";
+import { voiceRecognitionErrorMessage } from "@/modules/voice/errors";
 
 function LawyerCard({
   lawyer
@@ -59,6 +60,7 @@ export function LegalAssistant() {
   const [sttSupported, setSttSupported] = useState(false);
   const [ttsSupported, setTtsSupported] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const stopListeningRef = useRef<null | (() => void)>(null);
 
   useEffect(() => {
     void fetch("/api/public/settings", { cache: "no-store" })
@@ -85,6 +87,8 @@ export function LegalAssistant() {
     setTtsSupported(browserTextToSpeech.isSupported());
 
     return () => {
+      stopListeningRef.current?.();
+      stopListeningRef.current = null;
       browserTextToSpeech.stop();
     };
   }, [voiceEnabled]);
@@ -123,24 +127,36 @@ export function LegalAssistant() {
     }
   }
 
+  function finishListening() {
+    stopListeningRef.current = null;
+    setListening(false);
+  }
+
+  function stopListening() {
+    const stop = stopListeningRef.current;
+    stopListeningRef.current = null;
+    setListening(false);
+    stop?.();
+  }
+
   function listen() {
     setError(null);
     setListening(true);
 
     try {
-      browserSpeechToText.start(
+      stopListeningRef.current = browserSpeechToText.start(
         (text) => {
           setQuestion(text);
           void ask(text);
         },
-        () => setListening(false),
-        () => {
-          setListening(false);
-          setError("تشخیص صوت در این مرورگر با خطا روبه‌رو شد.");
+        finishListening,
+        (code) => {
+          finishListening();
+          setError(voiceRecognitionErrorMessage(code));
         }
       );
     } catch {
-      setListening(false);
+      finishListening();
       setError("ورودی صوتی در این مرورگر پشتیبانی نمی‌شود.");
     }
   }
@@ -150,6 +166,7 @@ export function LegalAssistant() {
       <div className="mode-row">
         <button
           className={mode === "simple" ? "active" : ""}
+          aria-pressed={mode === "simple"}
           onClick={() => setMode("simple")}
           type="button"
         >
@@ -157,6 +174,7 @@ export function LegalAssistant() {
         </button>
         <button
           className={mode === "expert" ? "active" : ""}
+          aria-pressed={mode === "expert"}
           onClick={() => setMode("expert")}
           type="button"
         >
@@ -186,7 +204,7 @@ export function LegalAssistant() {
       <div className="actions">
         <button
           onClick={() => void ask()}
-          disabled={loading}
+          disabled={loading || listening}
           type="button"
         >
           {loading ? "در حال بررسی منابع..." : "دریافت پاسخ مستند"}
@@ -194,11 +212,11 @@ export function LegalAssistant() {
 
         {voiceEnabled && sttSupported && (
           <button
-            onClick={listen}
-            disabled={listening || loading}
+            onClick={listening ? stopListening : listen}
+            disabled={loading}
             type="button"
           >
-            {listening ? "در حال شنیدن..." : "پرسش صوتی"}
+            {listening ? "توقف شنیدن" : "پرسش صوتی"}
           </button>
         )}
       </div>
@@ -210,7 +228,11 @@ export function LegalAssistant() {
         </p>
       )}
 
-      {error && <p className="error">{error}</p>}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
 
       {answer && (
         <article className="answer">
@@ -294,12 +316,20 @@ export function LegalAssistant() {
           <p className="disclaimer">{answer.disclaimer}</p>
 
           {voiceEnabled && ttsSupported && answer.documented && (
-            <button
-              type="button"
-              onClick={() => browserTextToSpeech.speak(answer.answer)}
-            >
-              خواندن پاسخ
-            </button>
+            <div className="actions">
+              <button
+                type="button"
+                onClick={() => browserTextToSpeech.speak(answer.answer)}
+              >
+                خواندن پاسخ
+              </button>
+              <button
+                type="button"
+                onClick={() => browserTextToSpeech.stop()}
+              >
+                توقف خواندن
+              </button>
+            </div>
           )}
         </article>
       )}

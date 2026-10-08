@@ -85,6 +85,15 @@ class BrowserTextToSpeechProvider implements TextToSpeechProvider {
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "fa-IR";
     utterance.rate = 0.95;
+
+    const persianVoice = window.speechSynthesis
+      .getVoices()
+      .find((voice) => voice.lang.toLowerCase().startsWith("fa"));
+
+    if (persianVoice) {
+      utterance.voice = persianVoice;
+    }
+
     window.speechSynthesis.speak(utterance);
   }
 

@@ -70,3 +70,37 @@ test("renders the Persian 404 page", async ({ page }) => {
     page.getByRole("link", { name: "بازگشت به صفحه اصلی" })
   ).toHaveAttribute("href", "/");
 });
+
+
+test("shows a text fallback when browser speech recognition is unavailable", async ({
+  page
+}) => {
+  await page.addInitScript(() => {
+    Object.defineProperty(window, "SpeechRecognition", {
+      value: undefined,
+      configurable: true
+    });
+    Object.defineProperty(window, "webkitSpeechRecognition", {
+      value: undefined,
+      configurable: true
+    });
+  });
+
+  await page.route("**/api/public/settings", async (route) => {
+    await route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify({ voiceEnabled: true })
+    });
+  });
+
+  await page.goto("/");
+
+  await expect(
+    page.getByText(/ورودی صوتی در این مرورگر در دسترس نیست/)
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", { name: "دریافت پاسخ مستند" })
+  ).toBeVisible();
+});
