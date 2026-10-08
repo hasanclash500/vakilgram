@@ -19,6 +19,7 @@ import {
   reviewEligibility
 } from "../../src/modules/reviews/service";
 import { importLawyerCsv } from "../../src/modules/lawyers/csv-import";
+import { setLawyerOwner } from "../../src/modules/lawyers/ownership-service";
 
 const prisma = getPrisma();
 
@@ -535,6 +536,44 @@ async function main() {
   assert.equal(importedLawyers[1]?.verified, false);
   assert.equal(importedLawyers[0]?.specialties.length, 2);
   assert.equal(importedLawyers[0]?.socialLinks.length, 1);
+
+  const ownerUser = await prisma.user.create({
+    data: {
+      email: "ci-bulk-owner@example.invalid",
+      name: "CI Bulk Owner",
+      role: "USER"
+    }
+  });
+
+  const linkedOwner = await setLawyerOwner(
+    prisma,
+    importedLawyers[0]!.id,
+    ownerUser.email
+  );
+
+  assert.equal(linkedOwner.ownerEmail, ownerUser.email);
+
+  const ownerAfterLink = await prisma.user.findUniqueOrThrow({
+    where: { id: ownerUser.id }
+  });
+
+  assert.equal(ownerAfterLink.role, "LAWYER");
+
+  const linkedLawyer = await prisma.lawyer.findUniqueOrThrow({
+    where: { id: importedLawyers[0]!.id }
+  });
+
+  assert.equal(linkedLawyer.userId, ownerUser.id);
+
+  await assert.rejects(
+    () =>
+      setLawyerOwner(
+        prisma,
+        importedLawyers[1]!.id,
+        ownerUser.email
+      ),
+    /USER_ALREADY_HAS_LAWYER/
+  );
 
   const cleanupNow = new Date("2026-10-08T10:00:00.000Z");
 
