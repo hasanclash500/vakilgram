@@ -48,8 +48,16 @@ export async function POST(
     );
   }
 
+  if (result.status === "insufficient-funds") {
+    return NextResponse.json(
+      { error: "موجودی کیف پول این جایگاه برای ثبت کلیک کافی نیست." },
+      { status: 409 }
+    );
+  }
+
   const response = NextResponse.json({
-    counted: result.counted
+    counted: result.counted,
+    chargedAmount: result.chargedAmount.toString()
   });
 
   if (visitor.isNew) {
