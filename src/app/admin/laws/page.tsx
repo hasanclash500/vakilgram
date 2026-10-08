@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
+import { readSourceAdapterConfig } from "@/modules/laws/source-adapter-config";
 import { LawImportForm } from "../components/law-import-form";
 import { SourceManager } from "../components/source-manager";
 import { LawReindexButton } from "../components/law-reindex-button";
@@ -93,7 +94,8 @@ export default async function AdminLawsPage({
         baseUrl: true,
         sourceType: true,
         official: true,
-        enabled: true
+        enabled: true,
+        config: true
       }
     }),
     prisma.law.count({ where })
@@ -129,7 +131,22 @@ export default async function AdminLawsPage({
       </header>
 
       <div className="admin-stack">
-        <SourceManager initialSources={allSources} />
+        <SourceManager
+          initialSources={allSources.map((source) => {
+            const adapter = readSourceAdapterConfig(source.config);
+
+            return {
+              id: source.id,
+              name: source.name,
+              baseUrl: source.baseUrl,
+              sourceType: source.sourceType,
+              official: source.official,
+              enabled: source.enabled,
+              adapterFormat: adapter?.format ?? null,
+              updateUrl: adapter?.updateUrl ?? ""
+            };
+          })}
+        />
         <LawReindexButton />
 
         {importSources.length > 0 ? (
