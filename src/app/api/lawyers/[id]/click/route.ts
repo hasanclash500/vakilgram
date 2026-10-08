@@ -36,19 +36,38 @@ export async function POST(
   );
 
   const prisma = getPrisma();
+  const now = new Date();
+
   const lawyer = await prisma.lawyer.findFirst({
-    where: { id: lawyerId, active: true },
+    where: {
+      id: lawyerId,
+      active: true,
+      verified: true,
+      featured: {
+        some: {
+          active: true,
+          startsAt: { lte: now },
+          OR: [
+            { endsAt: null },
+            { endsAt: { gte: now } }
+          ],
+          tier: {
+            active: true
+          }
+        }
+      }
+    },
     select: { id: true }
   });
 
   if (!lawyer) {
     return NextResponse.json(
-      { error: "وکیل موردنظر پیدا نشد." },
+      { error: "تبلیغ فعال برای این وکیل پیدا نشد." },
       { status: 404 }
     );
   }
 
-  const cutoff = new Date(Date.now() - CLICK_DEDUPE_WINDOW_MS);
+  const cutoff = new Date(now.getTime() - CLICK_DEDUPE_WINDOW_MS);
 
   const duplicate = await prisma.adClick.findFirst({
     where: {
