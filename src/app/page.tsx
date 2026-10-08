@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { LegalAssistant } from "./components/legal-assistant";
 
 export default function HomePage() {
@@ -11,15 +12,24 @@ export default function HomePage() {
           وجود منبع معتبر در پایگاه قوانین ارائه می‌شود.
         </p>
         <nav className="hero-links">
-          <a href="/laws">مرور قوانین</a>
-          <a href="/lawyers">دایرکتوری وکلا</a>
+          <Link href="/laws">مرور قوانین</Link>
+          <Link href="/lawyers">دایرکتوری وکلا</Link>
         </nav>
       </header>
 
       <LegalAssistant />
 
       <footer>
-        وکیل‌گرام جایگزین مشاوره رسمی وکیل یا بررسی پرونده توسط متخصص نیست.
+        <p>
+          وکیل‌گرام جایگزین مشاوره رسمی وکیل یا بررسی پرونده توسط متخصص
+          نیست.
+        </p>
+        <nav className="hero-links" aria-label="پیوندهای حقوقی">
+          <Link href="/about">درباره</Link>
+          <Link href="/privacy">حریم خصوصی</Link>
+          <Link href="/terms">شرایط استفاده</Link>
+          <Link href="/disclaimer">سلب مسئولیت</Link>
+        </nav>
       </footer>
     </main>
   );
