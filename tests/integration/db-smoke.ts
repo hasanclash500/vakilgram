@@ -3,6 +3,7 @@ import { getPrisma } from "../../src/lib/db/prisma";
 import { consumeLegalAskRateLimit } from "../../src/lib/rate-limit/legal-ask";
 import { cleanupOperationalData } from "../../src/modules/maintenance/cleanup-service";
 import { recordSponsoredClick } from "../../src/modules/ads/click-service";
+import { adjustWallet } from "../../src/modules/ads/wallet-service";
 import { importLawDocument } from "../../src/modules/laws/import-service";
 import { retrieveByText } from "../../src/modules/legal-qa/retrieval";
 
@@ -170,7 +171,7 @@ async function main() {
     data: {
       name: "CI TEST - featured tier",
       priority: 100,
-      costPerClick: 0n,
+      costPerClick: 25n,
       active: true
     }
   });
@@ -183,6 +184,14 @@ async function main() {
       endsAt: new Date(fixedNow.getTime() + 60 * 60 * 1000),
       active: true
     }
+  });
+
+  await adjustWallet(prisma, {
+    lawyerId: sponsoredLawyer.id,
+    amount: 100n,
+    type: "CREDIT",
+    description: "CI wallet funding",
+    idempotencyKey: "ci-wallet-funding"
   });
 
   const [clickA, clickB] = await Promise.all([
@@ -213,6 +222,56 @@ async function main() {
       }
     }),
     1
+  );
+
+  const sponsoredWallet = await prisma.wallet.findUniqueOrThrow({
+    where: { lawyerId: sponsoredLawyer.id },
+    include: {
+      entries: {
+        where: { type: "AD_CLICK" }
+      }
+    }
+  });
+
+  assert.equal(sponsoredWallet.balance, 75n);
+  assert.equal(sponsoredWallet.entries.length, 1);
+  assert.equal(sponsoredWallet.entries[0]?.amount, -25n);
+  assert.equal(sponsoredWallet.entries[0]?.balanceAfter, 75n);
+
+  const unfundedLawyer = await prisma.lawyer.create({
+    data: {
+      fullName: "CI TEST - unfunded sponsored lawyer",
+      slug: "ci-test-unfunded-sponsored-lawyer",
+      city: "CI",
+      verified: true,
+      active: true
+    }
+  });
+
+  await prisma.lawyerFeaturedSubscription.create({
+    data: {
+      lawyerId: unfundedLawyer.id,
+      tierId: tier.id,
+      startsAt: new Date(fixedNow.getTime() - 60 * 60 * 1000),
+      endsAt: new Date(fixedNow.getTime() + 60 * 60 * 1000),
+      active: true
+    }
+  });
+
+  const unfundedClick = await recordSponsoredClick(
+    prisma,
+    unfundedLawyer.id,
+    "ci-test-unfunded-visitor",
+    fixedNow
+  );
+
+  assert.equal(unfundedClick.status, "insufficient-funds");
+  assert.equal(unfundedClick.counted, false);
+  assert.equal(
+    await prisma.adClick.count({
+      where: { lawyerId: unfundedLawyer.id }
+    }),
+    0
   );
 
   const organicClick = await recordSponsoredClick(
