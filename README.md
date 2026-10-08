@@ -64,7 +64,7 @@
 
 برای دیتابیس خالی، migrationهای commit‌شده را اجرا کنید:
 
-`npx prisma migrate deploy`
+`npm run db:deploy`
 
 ترتیب migrationها:
 - `0000_extensions`: فعال‌سازی pgvector
@@ -74,8 +74,13 @@
 
 `npm ci && npm run db:generate && npm run build`
 
+## سلامت سرویس
+
+`GET /api/health` دیتابیس، جدول مواد، جدول rate limit و تنظیمات runtime را بررسی می‌کند. در نبود migration یا دیتابیس پاسخ 503 می‌دهد و جزئیات خطای داخلی را افشا نمی‌کند.
+
 ## تست و CI
 
+- `npm run verify` برای generate + typecheck + test + build
 - `npm run typecheck`
 - `npm test`
 - `npm run build`
