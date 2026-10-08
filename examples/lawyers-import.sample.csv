@@ -1,0 +1,3 @@
+full_name,slug,license_number,city,province,bio,avatar_url,active,specialties,social_links
+"نمونه ساختگی وکیل اول","demo-fictional-lawyer-one","DEMO-001","تهران","تهران","این پروفایل کاملاً ساختگی و فقط برای آزمایش import است.","https://example.invalid/avatar-1.jpg","true","خانواده|قرارداد","website|https://example.invalid/lawyer-one"
+"نمونه ساختگی وکیل دوم","demo-fictional-lawyer-two","DEMO-002","شیراز","فارس","این پروفایل نیز ساختگی است و نباید به‌عنوان وکیل واقعی منتشر شود.","","true","کیفری",""

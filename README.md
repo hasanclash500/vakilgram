@@ -1,121 +1,143 @@
 # وکیل‌گرام
 
-پلتفرم فارسی RTL برای پاسخ حقوقی مستند، دستیار صوتی و معرفی وکلای تأییدشده.
+پلتفرم فارسی RTL برای پاسخ حقوقی مستند، دستیار صوتی، تعامل کاربر و وکیل و مدل درآمد کلیکی.
 
-> وضعیت: کد فاز ۱ در نسخه `0.1.0` کامل شده و برای استقرار نیازمند تنظیم Environment و ورود داده حقوقی واقعی است.
+> وضعیت: فاز ۲ در نسخه `0.2.0` روی شاخه `phase-2` کدکامل است. برای Production باید Environment، Providerهای AI، دیتابیس و داده حقوقی/وکلا با اطلاعات واقعی تنظیم شوند.
 
 ## پشته فنی
 
 - Next.js 16.3.8 + React 19 + TypeScript
-- PostgreSQL / Neon
-- pgvector + tsvector
+- PostgreSQL / Neon + pgvector + tsvector
 - Prisma ORM 7.10
 - Auth.js v5 + Prisma Adapter
 - Zod
-- Vitest
+- Vitest + Playwright
 - GitHub Actions
-- Playwright
 
-## قابلیت‌های فاز ۱
+## قابلیت‌های فعال تا فاز ۲
 
-- RAG حقوقی ترکیبی: Full-text + Embedding + RRF
-- پاسخ بندبه‌بند با citation معتبر به Articleهای بازیابی‌شده
-- نمایش متن ماده فقط از دیتابیس
-- ورود قانون به‌صورت دستی، JSON و CSV
-- Source رسمی/فعال و نسخه‌بندی ماده
-- صف بازبینی تغییرات مواد
-- دایرکتوری و پروفایل عمومی وکلا
-- مدیریت کامل پروفایل وکیل در پنل ادمین
-- سطح ویژه، rotation و dedupe کلیک یک‌ساعته
+### دستیار حقوقی
+
+- RAG ترکیبی Full-text + Embedding + RRF
+- grounding بندبه‌بند با citation معتبر
+- متن ماده فقط از دیتابیس و Source رسمی/فعال
+- نمایش وضعیت قانون و هشدار منسوخ
 - دستیار صوتی فارسی: STT مرورگر → همان RAG → TTS مرورگر
-- Provider chain برای LLM و Embedding با fallback و health metrics
+- Provider chain برای LLM/Embedding با fallback و health metrics
+
+### قوانین
+
+- ورود دستی، JSON، CSV و فایل محلی
+- versioning و checksum ماده
+- Adapter دستی JSON/CSV برای Source رسمی
+- دکمه بررسی به‌روزرسانی
+- staging + diff + Review Queue
+- approve/reject ادمین با stale guard
+- reindex بعد از تأیید
+- `FEATURE_AUTO_UPDATE=false`: زمان‌بندی خودکار در فاز ۳ است
+
+### وکلا و درآمد
+
+- دایرکتوری و صفحات عمومی وکلای تأییدشده
+- پنل self-service وکیل
+- ورود گروهی CSV توسط ادمین بدون auto-verify
+- اتصال پروفایل واردشده به حساب کاربری موجود
+- سطح ویژه و rotation
+- کیف پول فعال و ledger
+- کسر خودکار CPC روی کلیک معتبر
+- dedupe یک‌ساعته و کنترل race با PostgreSQL advisory lock
+- وکیل ویژه بدون موجودی کافی از جایگاه پولی حذف می‌شود
+
+> موجودی و `costPerClick` به‌صورت عدد صحیح در «واحد اعتبار» نگهداری می‌شوند. این نسخه واحد را تومان/ریال فرض نمی‌کند. درگاه پرداخت در فاز ۳ اضافه می‌شود.
+
+### تعامل
+
+- چت متنی کاربر/وکیل با رضایت صریح برای ذخیره
+- دسترسی مکالمه فقط برای دو طرف
+- نظر فقط پس از تعامل واقعی دوطرفه و بسته‌شده
+- یک نظر برای هر تعامل
+- پنهان‌سازی نظر توسط ادمین با دلیل
+- امتیاز بیزی و رتبه‌بندی وکلای غیرتبلیغاتی بر اساس ستاره واقعی
+
+### امنیت و مدیریت
+
 - Google OAuth و Magic Link با Resend
-- RBAC ادمین و Audit log
-- Security audit برای dependencyهای runtime
+- RBAC در API
+- TOTP 2FA ادمین + recovery code
+- رمزنگاری secret عامل دوم با AES-256-GCM
+- rate limit برای 2FA و API پرسش
+- Audit log
+- عدم لاگ متن پرسش
+- telemetry AI بدون prompt/answer
+- SEO، sitemap، robots، JSON-LD، صفحات حقوقی
+- readiness و maintenance dashboard
 
-## قواعد صحت و حریم خصوصی
+## قواعد حریم خصوصی و صحت
 
-- متن پرسش کاربر به‌صورت پیش‌فرض در دیتابیس لاگ نمی‌شود.
-- `ai_usage_logs` فقط Provider، latency، موفق/ناموفق بودن و کد خطا را نگه می‌دارد.
-- RAG فقط از Sourceهای `official=true` و `enabled=true` بازیابی می‌کند.
-- هر بند مدل باید حداقل یک `articleId` معتبر از context داشته باشد؛ بند بدون citation حذف می‌شود.
-- متن ماده قانونی از خروجی مدل گرفته نمی‌شود.
-- تبلیغات روی محتوای پاسخ یا ترتیب منابع حقوقی اثر ندارند.
-- IP خام برای dedupe تبلیغ ذخیره نمی‌شود.
-- API key داخل Git یا دیتابیس ذخیره نمی‌شود؛ فقط نام متغیر Environment در تنظیم Provider ثبت می‌شود.
+- متن پرسش دستیار به‌صورت پیش‌فرض ذخیره نمی‌شود.
+- چت فقط با رضایت صریح کاربر ذخیره می‌شود.
+- متن قانون از مدل AI تولید نمی‌شود.
+- پاسخ فاقد citation معتبر منتشر نمی‌شود.
+- API key در Git یا دیتابیس ذخیره نمی‌شود.
+- IP خام برای rate-limit یا کلیک ذخیره نمی‌شود.
+- پرداخت و جایگاه تبلیغاتی روی محتوای پاسخ یا ترتیب منابع حقوقی اثر ندارند.
+- CSV وکلا هیچ پروفایلی را خودکار تأیید نمی‌کند.
 
 ## اجرای محلی
 
 نیازمندی: Node.js 22 یا جدیدتر.
 
-1. وابستگی‌ها را دقیقاً از lockfile نصب کنید:
+1. `.env.example` را به `.env.local` و برای Prisma CLI به `.env` کپی کنید.
+2. `DATABASE_URL` و `DIRECT_URL` را تنظیم کنید.
+3. وابستگی‌ها:
    `npm ci`
-2. `.env.example` را برای Next.js به `.env.local` و برای Prisma CLI به `.env` کپی کنید.
-3. `DATABASE_URL` و `DIRECT_URL` را تنظیم کنید.
 4. Prisma Client:
    `npm run db:generate`
-5. دیتابیس توسعه:
-   `npm run db:migrate -- --name local`
+5. migration:
+   `npm run db:deploy`
 6. در صورت نیاز seed:
    `npm run db:seed`
 7. اجرا:
    `npm run dev`
 
-## استقرار
+## migrationها
 
-برای دیتابیس خالی، migrationهای commit‌شده را اجرا کنید:
+- `0000_extensions`: pgvector
+- `0001_initial_schema`: schema اصلی + GIN index
+- `0002_api_rate_limits`: rate limit پایدار
+- `0003_phase2_foundation`: Wallet/Chat/Reviews metadata/Admin 2FA
 
-`npm run db:deploy`
+## Feature Flags
 
-ترتیب migrationها:
-- `0000_extensions`: فعال‌سازی pgvector
-- `0001_initial_schema`: schema کامل و GIN index جست‌وجوی متنی
-- `0002_api_rate_limits`: rate limit پایدار API پرسش حقوقی
-
-سپس برنامه را build کنید:
-
-`npm ci && npm run db:generate && npm run build`
-
-## سلامت سرویس
-
-`GET /api/health` دیتابیس، جدول مواد، جدول rate limit و تنظیمات runtime را بررسی می‌کند. در نبود migration یا دیتابیس پاسخ 503 می‌دهد و جزئیات خطای داخلی را افشا نمی‌کند.
+- `FEATURE_VOICE=true`
+- `FEATURE_WALLET=true`
+- `FEATURE_REVIEWS=true`
+- `FEATURE_CHAT=true`
+- `FEATURE_AUTO_UPDATE=false`
 
 ## تست و CI
 
-- `npm run verify` برای generate + typecheck + test + build
 - `npm run typecheck`
 - `npm test`
 - `npm run build`
-- `npm run test:e2e` برای smoke test مرورگر
-- `npm run test:integration` روی PostgreSQL+pgvector واقعی
+- `npm run test:e2e`
+- `npm run test:integration`
 
-روی هر push به `main` و Pull Request، GitHub Actions این موارد را اجرا می‌کند و dependencyهای runtime را برای آسیب‌پذیری High/Critical audit می‌کند.
+GitHub Actions روی `main` و `phase-2` runtime dependency audit، TypeScript، Vitest، production build، Playwright و PostgreSQL+pgvector integration را اجرا می‌کند.
 
-## متغیرهای مهم
+## راهنماها
 
-به `.env.example` مراجعه کنید. برای ادمین، `ADMIN_EMAILS` را تنظیم کنید. برای Magic Link، `AUTH_RESEND_KEY` و `EMAIL_FROM` لازم است. Google OAuth فقط وقتی `AUTH_GOOGLE_ID` و `AUTH_GOOGLE_SECRET` تنظیم باشند فعال می‌شود.
-
-## خارج از فاز ۱
-
-چت مستقل، کیف پول فعال، نظرات فعال، OTP، پرداخت و ingestion زمان‌بندی‌شده در فازهای بعدی فعال می‌شوند؛ جداول لازم برای توسعه بعدی از ابتدا در schema در نظر گرفته شده‌اند.
-
-
-## راهنمای عملیاتی
-
-برای استقرار مرحله‌به‌مرحله و smoke test فاز ۱:
+- `docs/PHASE1_STATUS.md`
 - `docs/PHASE1_DEPLOYMENT_CHECKLIST.md`
-- نمونه JSON: `examples/law-import.sample.json`
-- نمونه CSV: `examples/law-import.sample.csv`
+- `docs/PHASE2_STATUS.md`
+- `docs/PHASE2_DEPLOYMENT_CHECKLIST.md`
+- نمونه قانون: `examples/law-import.sample.json` و `examples/law-import.sample.csv`
+- نمونه وکلا: `examples/lawyers-import.sample.csv`
 
-فایل‌های نمونه عمداً «نمونه ساختگی» هستند و نباید به‌عنوان منبع رسمی واقعی استفاده شوند.
+## خارج از فاز ۲
 
+OTP، درگاه پرداخت رسمی، update زمان‌بندی‌شده، adapterهای بیشتر خودکار، رأی وحدت رویه/نظریات مشورتی، reranking و ارزیابی خودکار، PWA/موبایل و API عمومی در این نسخه فعال نیستند.
 
-## آمادگی انتشار
+## تاریخچه
 
-صفحه `/admin/maintenance` بدون نمایش secretها وضعیت Source رسمی، مواد قانونی، LLM، Embedding، Voice، Auth، HMAC مرورگر، SITE_URL و وکلای تأییدشده را نشان می‌دهد. این صفحه همچنین شمارنده داده‌های موقت و پاکسازی دستی rate-limit/AI telemetry را در اختیار ادمین قرار می‌دهد.
-
-
-## وضعیت نسخه
-
-- جزئیات فاز ۱: `docs/PHASE1_STATUS.md`
-- تاریخچه تغییرات: `CHANGELOG.md`
+به `CHANGELOG.md` مراجعه کنید.
