@@ -2,6 +2,7 @@ import type { PrismaClient } from "@/generated/prisma/client";
 import { OpenAiCompatibleProvider } from "./openai-compatible";
 import type { LlmProvider, LlmRequest } from "./types";
 import type { z } from "zod";
+import { providerErrorCode } from "@/providers/telemetry/error-code";
 
 interface ProviderEntry {
   configId: string;
@@ -56,17 +57,16 @@ export class LlmRegistry {
         });
         return result;
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : "unknown error";
+        const errorCode = providerErrorCode(error);
 
         await recordUsage(this.prisma, {
           providerConfigId: entry.configId,
           success: false,
           latencyMs: Date.now() - startedAt,
-          errorCode: message
+          errorCode
         });
 
-        errors.push(`${entry.provider.name}: ${message}`);
+        errors.push(`${entry.provider.name}: ${errorCode}`);
       }
     }
 
