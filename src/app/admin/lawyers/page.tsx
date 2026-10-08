@@ -6,6 +6,7 @@ import {
   NewLawyerForm
 } from "../components/lawyer-profile-form";
 import { LawyerCsvImport } from "../components/lawyer-csv-import";
+import { LawyerOwnerEditor } from "../components/lawyer-owner-editor";
 import { getAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
 
@@ -113,7 +114,8 @@ export default async function AdminLawyersPage({
     take: PAGE_SIZE,
     include: {
       specialties: { select: { area: true } },
-      socialLinks: { select: { platform: true, url: true } }
+      socialLinks: { select: { platform: true, url: true } },
+      user: { select: { email: true } }
     }
   });
 
@@ -198,27 +200,32 @@ export default async function AdminLawyersPage({
 
           <div className="admin-editor-grid">
             {lawyers.map((lawyer) => (
-              <ExistingLawyerEditor
-                key={lawyer.id}
-                lawyer={{
-                  id: lawyer.id,
-                  fullName: lawyer.fullName,
-                  slug: lawyer.slug,
-                  licenseNumber: lawyer.licenseNumber ?? "",
-                  city: lawyer.city,
-                  province: lawyer.province ?? "",
-                  bio: lawyer.bio ?? "",
-                  avatarUrl: lawyer.avatarUrl ?? "",
-                  verified: lawyer.verified,
-                  active: lawyer.active,
-                  specialtiesText: lawyer.specialties
-                    .map((item) => item.area)
-                    .join(", "),
-                  socialLinksText: lawyer.socialLinks
-                    .map((item) => item.platform + "|" + item.url)
-                    .join("\n")
-                }}
-              />
+              <div className="admin-stack" key={lawyer.id}>
+                <ExistingLawyerEditor
+                  lawyer={{
+                    id: lawyer.id,
+                    fullName: lawyer.fullName,
+                    slug: lawyer.slug,
+                    licenseNumber: lawyer.licenseNumber ?? "",
+                    city: lawyer.city,
+                    province: lawyer.province ?? "",
+                    bio: lawyer.bio ?? "",
+                    avatarUrl: lawyer.avatarUrl ?? "",
+                    verified: lawyer.verified,
+                    active: lawyer.active,
+                    specialtiesText: lawyer.specialties
+                      .map((item) => item.area)
+                      .join(", "),
+                    socialLinksText: lawyer.socialLinks
+                      .map((item) => item.platform + "|" + item.url)
+                      .join("\n")
+                  }}
+                />
+                <LawyerOwnerEditor
+                  lawyerId={lawyer.id}
+                  initialOwnerEmail={lawyer.user?.email ?? ""}
+                />
+              </div>
             ))}
           </div>
 
