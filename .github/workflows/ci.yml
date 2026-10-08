@@ -6,7 +6,7 @@ on:
   pull_request:
 
 permissions:
-  contents: read
+  contents: write
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -30,19 +30,34 @@ jobs:
   test:
     runs-on: ubuntu-latest
     env:
-      DATABASE_URL: postgresql://user:pass@localhost:5432/vakilgram
-      DIRECT_URL: postgresql://user:pass@localhost:5432/vakilgram
+      DATABASE_URL: postgresql://user:pass@127.0.0.1:5432/vakilgram
+      DIRECT_URL: postgresql://user:pass@127.0.0.1:5432/vakilgram
       NEXT_PUBLIC_FEATURE_VOICE: "true"
       AUTH_SECRET: ci-only-not-for-production-change-me
       AUTH_TRUST_HOST: "true"
+      SITE_URL: http://127.0.0.1:3000
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-      - run: npm ci
+      - run: npm install
+      - run: npx playwright install --with-deps chromium
       - run: npm run db:generate
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run test:e2e
+      - name: Commit updated lockfile
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "vakilgram-ci"
+          git config user.email "vakilgram-ci@users.noreply.github.com"
+          git add package-lock.json
+          if git diff --cached --quiet; then
+            echo "package-lock.json already current."
+          else
+            git commit -m "chore: lock Playwright test dependency"
+            git push
+          fi
