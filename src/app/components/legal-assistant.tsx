@@ -15,6 +15,8 @@ function LawyerCard({
   lawyer: LawyerRecommendation;
 }) {
   function recordClick() {
+    if (!lawyer.sponsored) return;
+
     void fetch(`/api/lawyers/${lawyer.id}/click`, {
       method: "POST",
       keepalive: true
