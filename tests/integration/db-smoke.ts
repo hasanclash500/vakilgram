@@ -1,6 +1,8 @@
 import assert from "node:assert/strict";
 import { getPrisma } from "../../src/lib/db/prisma";
 import { consumeLegalAskRateLimit } from "../../src/lib/rate-limit/legal-ask";
+import { cleanupOperationalData } from "../../src/modules/maintenance/cleanup-service";
+import { recordSponsoredClick } from "../../src/modules/ads/click-service";
 import { importLawDocument } from "../../src/modules/laws/import-service";
 import { retrieveByText } from "../../src/modules/legal-qa/retrieval";
 
@@ -143,6 +145,175 @@ async function main() {
   assert.equal(secondRate.allowed, true);
   assert.equal(thirdRate.allowed, false);
   assert.equal(thirdRate.remaining, 0);
+
+  const sponsoredLawyer = await prisma.lawyer.create({
+    data: {
+      fullName: "CI TEST - sponsored lawyer",
+      slug: "ci-test-sponsored-lawyer",
+      city: "CI",
+      verified: true,
+      active: true
+    }
+  });
+
+  const organicLawyer = await prisma.lawyer.create({
+    data: {
+      fullName: "CI TEST - organic lawyer",
+      slug: "ci-test-organic-lawyer",
+      city: "CI",
+      verified: true,
+      active: true
+    }
+  });
+
+  const tier = await prisma.featuredTier.create({
+    data: {
+      name: "CI TEST - featured tier",
+      priority: 100,
+      costPerClick: 0n,
+      active: true
+    }
+  });
+
+  await prisma.lawyerFeaturedSubscription.create({
+    data: {
+      lawyerId: sponsoredLawyer.id,
+      tierId: tier.id,
+      startsAt: new Date(fixedNow.getTime() - 60 * 60 * 1000),
+      endsAt: new Date(fixedNow.getTime() + 60 * 60 * 1000),
+      active: true
+    }
+  });
+
+  const [clickA, clickB] = await Promise.all([
+    recordSponsoredClick(
+      prisma,
+      sponsoredLawyer.id,
+      "ci-test-sponsored-visitor",
+      fixedNow
+    ),
+    recordSponsoredClick(
+      prisma,
+      sponsoredLawyer.id,
+      "ci-test-sponsored-visitor",
+      fixedNow
+    )
+  ]);
+
+  assert.deepEqual(
+    new Set([clickA.status, clickB.status]),
+    new Set(["counted", "duplicate"])
+  );
+
+  assert.equal(
+    await prisma.adClick.count({
+      where: {
+        lawyerId: sponsoredLawyer.id,
+        visitorHash: "ci-test-sponsored-visitor"
+      }
+    }),
+    1
+  );
+
+  const organicClick = await recordSponsoredClick(
+    prisma,
+    organicLawyer.id,
+    "ci-test-organic-visitor",
+    fixedNow
+  );
+
+  assert.equal(organicClick.status, "not-sponsored");
+  assert.equal(organicClick.counted, false);
+
+  const cleanupNow = new Date("2026-10-08T10:00:00.000Z");
+
+  await prisma.apiRateLimit.createMany({
+    data: [
+      {
+        scope: "ci-cleanup",
+        visitorHash: "old-rate",
+        windowStart: new Date(
+          cleanupNow.getTime() - 72 * 60 * 60 * 1000
+        ),
+        count: 1
+      },
+      {
+        scope: "ci-cleanup",
+        visitorHash: "fresh-rate",
+        windowStart: new Date(
+          cleanupNow.getTime() - 60 * 60 * 1000
+        ),
+        count: 1
+      }
+    ]
+  });
+
+  await prisma.aiUsageLog.createMany({
+    data: [
+      {
+        kind: "LLM",
+        success: true,
+        latencyMs: 10,
+        errorCode: null,
+        createdAt: new Date(
+          cleanupNow.getTime() - 100 * 24 * 60 * 60 * 1000
+        )
+      },
+      {
+        kind: "LLM",
+        success: true,
+        latencyMs: 11,
+        errorCode: null,
+        createdAt: new Date(
+          cleanupNow.getTime() - 24 * 60 * 60 * 1000
+        )
+      }
+    ]
+  });
+
+  const cleanup = await cleanupOperationalData(
+    prisma,
+    {
+      rateLimitRetentionHours: 48,
+      aiUsageRetentionDays: 90
+    },
+    cleanupNow
+  );
+
+  assert.ok(cleanup.deletedRateLimitRows >= 1);
+  assert.ok(cleanup.deletedAiUsageRows >= 1);
+
+  assert.equal(
+    await prisma.apiRateLimit.count({
+      where: {
+        scope: "ci-cleanup",
+        visitorHash: "old-rate"
+      }
+    }),
+    0
+  );
+
+  assert.equal(
+    await prisma.apiRateLimit.count({
+      where: {
+        scope: "ci-cleanup",
+        visitorHash: "fresh-rate"
+      }
+    }),
+    1
+  );
+
+  const recentUsageCount = await prisma.aiUsageLog.count({
+    where: {
+      createdAt: {
+        gte: new Date(
+          cleanupNow.getTime() - 2 * 24 * 60 * 60 * 1000
+        )
+      }
+    }
+  });
+
+  assert.ok(recentUsageCount >= 1);
 
   const extension = await prisma.$queryRaw<Array<{ extname: string }>>`
     SELECT extname

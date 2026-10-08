@@ -7,7 +7,7 @@ import {
   VISITOR_COOKIE,
   VISITOR_COOKIE_MAX_AGE
 } from "@/lib/privacy/visitor";
-import { CLICK_DEDUPE_WINDOW_MS } from "@/modules/ads/click-dedupe";
+import { recordSponsoredClick } from "@/modules/ads/click-service";
 
 export async function POST(
   _request: Request,
@@ -35,60 +35,21 @@ export async function POST(
     "ad-click"
   );
 
-  const prisma = getPrisma();
-  const now = new Date();
+  const result = await recordSponsoredClick(
+    getPrisma(),
+    lawyerId,
+    visitorHash
+  );
 
-  const lawyer = await prisma.lawyer.findFirst({
-    where: {
-      id: lawyerId,
-      active: true,
-      verified: true,
-      featured: {
-        some: {
-          active: true,
-          startsAt: { lte: now },
-          OR: [
-            { endsAt: null },
-            { endsAt: { gte: now } }
-          ],
-          tier: {
-            active: true
-          }
-        }
-      }
-    },
-    select: { id: true }
-  });
-
-  if (!lawyer) {
+  if (result.status === "not-sponsored") {
     return NextResponse.json(
       { error: "تبلیغ فعال برای این وکیل پیدا نشد." },
       { status: 404 }
     );
   }
 
-  const cutoff = new Date(now.getTime() - CLICK_DEDUPE_WINDOW_MS);
-
-  const duplicate = await prisma.adClick.findFirst({
-    where: {
-      lawyerId,
-      visitorHash,
-      clickedAt: { gte: cutoff }
-    },
-    select: { id: true }
-  });
-
-  if (!duplicate) {
-    await prisma.adClick.create({
-      data: {
-        lawyerId,
-        visitorHash
-      }
-    });
-  }
-
   const response = NextResponse.json({
-    counted: !duplicate
+    counted: result.counted
   });
 
   if (visitor.isNew) {
