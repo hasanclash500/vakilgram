@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { isHttpUrl } from "@/lib/url/http";
 import { adminAccessError } from "@/lib/auth/api";
 import { requireAdminUser } from "@/lib/auth/admin";
 import { writeAudit } from "@/lib/audit/write-audit";
@@ -7,7 +8,7 @@ import { getPrisma } from "@/lib/db/prisma";
 
 const schema = z.object({
   title: z.string().trim().min(2).max(300).optional(),
-  sourceUrl: z.string().url().max(500).nullable().optional(),
+  sourceUrl: z.string().trim().url().max(500).refine(isHttpUrl, "URL must use HTTP(S)").nullable().optional(),
   enactedAt: z.string().date().nullable().optional(),
   effectiveAt: z.string().date().nullable().optional(),
   status: z
