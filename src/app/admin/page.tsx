@@ -64,8 +64,14 @@ export default async function AdminPage() {
     {
       href: "/admin/settings",
       title: "تنظیمات",
-      value: "فاز ۱",
+      value: "فاز ۲",
       detail: "Feature Flagها، Voice و هشدار حقوقی"
+    },
+    {
+      href: "/admin/security",
+      title: "امنیت ادمین",
+      value: "2FA",
+      detail: "TOTP و Recovery Code"
     },
     {
       href: "/admin/review-queue",
