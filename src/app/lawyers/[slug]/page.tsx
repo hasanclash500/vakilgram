@@ -25,8 +25,7 @@ async function getLawyer(slug: string) {
           platform: true,
           url: true
         }
-      },
-      userId: true
+      }
     }
   });
 }
