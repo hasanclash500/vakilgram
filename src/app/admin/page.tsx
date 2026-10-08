@@ -56,10 +56,16 @@ export default async function AdminPage() {
       detail: "سطح، اولویت و اشتراک ویژه"
     },
     {
+      href: "/admin/wallets",
+      title: "کیف پول",
+      value: "فعال",
+      detail: "موجودی و تراکنش وکلا"
+    },
+    {
       href: "/admin/settings",
       title: "تنظیمات",
       value: "فاز ۱",
-      detail: "Voice و هشدار حقوقی"
+      detail: "Feature Flagها، Voice و هشدار حقوقی"
     },
     {
       href: "/admin/review-queue",
@@ -84,7 +90,7 @@ export default async function AdminPage() {
   return (
     <main className="shell">
       <header className="hero">
-        <span className="eyebrow">پنل مدیریت · فاز ۱</span>
+        <span className="eyebrow">پنل مدیریت · فاز ۲</span>
         <h1>مدیریت وکیل‌گرام</h1>
         <p>
           ورود به این بخش علاوه بر session، در هر API با نقش ADMIN
