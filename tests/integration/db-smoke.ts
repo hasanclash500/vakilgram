@@ -197,6 +197,41 @@ async function main() {
     }
   });
 
+  const stagedMetadataReview =
+    await prisma.reviewQueue.findFirstOrThrow({
+      where: {
+        kind: "LAW_METADATA_UPDATE_STAGED",
+        status: "PENDING",
+        afterData: {
+          path: ["lawId"],
+          equals: beforeApproval.lawId
+        }
+      }
+    });
+
+  await prisma.law.update({
+    where: { id: beforeApproval.lawId },
+    data: { status: "UNKNOWN" }
+  });
+
+  await assert.rejects(
+    () =>
+      reviewStagedLawChange(
+        prisma,
+        stagedMetadataReview.id,
+        "ci-test-admin",
+        "approve"
+      ),
+    /STALE_REVIEW/
+  );
+
+  await reviewStagedLawChange(
+    prisma,
+    stagedMetadataReview.id,
+    "ci-test-admin",
+    "reject"
+  );
+
   await reviewStagedLawChange(
     prisma,
     stagedReview.id,
@@ -217,6 +252,7 @@ async function main() {
   assert.equal(afterApproval.currentVersion, 2);
   assert.equal(afterApproval.versions.length, 2);
   assert.equal(afterApproval.text, "CI TEST staged version two");
+  assert.equal(afterApproval.law.status, "UNKNOWN");
 
   const fixedNow = new Date("2026-10-08T08:00:00.000Z");
   const firstRate = await consumeLegalAskRateLimit(
