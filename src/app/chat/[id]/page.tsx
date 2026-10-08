@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { ChatThread } from "@/app/components/chat-thread";
+import { ReviewForm } from "@/app/components/review-form";
 import { getPrisma } from "@/lib/db/prisma";
 import { requireUser } from "@/lib/auth/user";
 import { featureEnabled } from "@/lib/features";
@@ -8,6 +9,7 @@ import {
   ChatError,
   getConversationForParticipant
 } from "@/modules/chat/service";
+import { reviewEligibility } from "@/modules/reviews/service";
 
 export const dynamic = "force-dynamic";
 
@@ -63,6 +65,18 @@ export default async function ChatPage({
       ? "کاربر"
       : access.conversation.lawyer?.fullName ?? "وکیل";
 
+  const reviewState =
+    access.participantRole === "USER" &&
+    access.conversation.status === "CLOSED" &&
+    access.conversation.lawyer?.id
+      ? await reviewEligibility(
+          prisma,
+          user.id,
+          access.conversation.lawyer.id,
+          id
+        )
+      : null;
+
   return (
     <main className="shell">
       <p><Link href="/chat">بازگشت به گفتگوها</Link></p>
@@ -75,15 +89,33 @@ export default async function ChatPage({
         </p>
       </header>
 
-      <ChatThread
-        conversationId={id}
-        currentRole={access.participantRole}
-        initialStatus={access.conversation.status}
-        initialMessages={messages.map((message) => ({
-          ...message,
-          createdAt: message.createdAt.toISOString()
-        }))}
-      />
+      <div className="admin-stack">
+        <ChatThread
+          conversationId={id}
+          currentRole={access.participantRole}
+          initialStatus={access.conversation.status}
+          initialMessages={messages.map((message) => ({
+            ...message,
+            createdAt: message.createdAt.toISOString()
+          }))}
+        />
+
+        {reviewState?.eligible &&
+          access.conversation.lawyer?.id && (
+            <ReviewForm
+              lawyerId={access.conversation.lawyer.id}
+              conversationId={id}
+            />
+          )}
+
+        {reviewState &&
+          !reviewState.eligible &&
+          reviewState.reason === "already-reviewed" && (
+            <p className="disclaimer">
+              برای این گفت‌وگو قبلاً نظر ثبت شده است.
+            </p>
+          )}
+      </div>
     </main>
   );
 }
