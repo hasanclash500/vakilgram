@@ -3,6 +3,7 @@ import { z } from "zod";
 import { adminAccessError } from "@/lib/auth/api";
 import { requirePrimaryAdminUser } from "@/lib/auth/admin";
 import { getPrisma } from "@/lib/db/prisma";
+import { consumeAdminTwoFactorRateLimit } from "@/modules/auth/admin-2fa-rate-limit";
 import { verifyAdminSecondFactor } from "@/modules/auth/admin-2fa";
 
 const schema = z.object({
@@ -13,9 +14,31 @@ export async function POST(request: Request) {
   try {
     const admin = await requirePrimaryAdminUser();
     const input = schema.parse(await request.json());
+    const prisma = getPrisma();
+    const rateLimit = await consumeAdminTwoFactorRateLimit(
+      prisma,
+      admin.id
+    );
+
+    if (!rateLimit.allowed) {
+      return NextResponse.json(
+        {
+          error:
+            "تعداد تلاش‌های 2FA زیاد است. پس از پایان این بازه دوباره تلاش کنید."
+        },
+        {
+          status: 429,
+          headers: {
+            "retry-after": String(rateLimit.retryAfterSeconds),
+            "x-ratelimit-limit": String(rateLimit.limit),
+            "x-ratelimit-remaining": "0"
+          }
+        }
+      );
+    }
 
     const verified = await verifyAdminSecondFactor(
-      getPrisma(),
+      prisma,
       admin.id,
       input.code
     );
