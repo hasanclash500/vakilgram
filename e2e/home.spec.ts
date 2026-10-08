@@ -57,3 +57,16 @@ test.describe("public homepage", () => {
     await expect(expert).toHaveClass(/active/);
   });
 });
+
+
+test("renders the Persian 404 page", async ({ page }) => {
+  const response = await page.goto("/this-route-does-not-exist");
+
+  expect(response?.status()).toBe(404);
+  await expect(
+    page.getByRole("heading", { level: 1, name: "صفحه پیدا نشد" })
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "بازگشت به صفحه اصلی" })
+  ).toHaveAttribute("href", "/");
+});
