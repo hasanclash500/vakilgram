@@ -6,6 +6,15 @@ import { recordSponsoredClick } from "../../src/modules/ads/click-service";
 import { adjustWallet } from "../../src/modules/ads/wallet-service";
 import { importLawDocument } from "../../src/modules/laws/import-service";
 import { retrieveByText } from "../../src/modules/legal-qa/retrieval";
+import {
+  closeConversation,
+  createLawyerConversation,
+  sendConversationMessage
+} from "../../src/modules/chat/service";
+import {
+  createVerifiedReview,
+  reviewEligibility
+} from "../../src/modules/reviews/service";
 
 const prisma = getPrisma();
 
@@ -283,6 +292,122 @@ async function main() {
 
   assert.equal(organicClick.status, "not-sponsored");
   assert.equal(organicClick.counted, false);
+
+  const chatClient = await prisma.user.create({
+    data: {
+      email: "ci-chat-client@example.invalid",
+      name: "CI Chat Client"
+    }
+  });
+
+  const chatLawyerUser = await prisma.user.create({
+    data: {
+      email: "ci-chat-lawyer@example.invalid",
+      name: "CI Chat Lawyer User",
+      role: "LAWYER"
+    }
+  });
+
+  const chatLawyer = await prisma.lawyer.create({
+    data: {
+      userId: chatLawyerUser.id,
+      fullName: "CI TEST - chat lawyer",
+      slug: "ci-test-chat-lawyer",
+      city: "CI",
+      verified: true,
+      active: true
+    }
+  });
+
+  const conversation = await createLawyerConversation(
+    prisma,
+    chatClient.id,
+    chatLawyer.id,
+    true
+  );
+
+  await sendConversationMessage(
+    prisma,
+    conversation.id,
+    chatClient.id,
+    "CI TEST client message"
+  );
+
+  await sendConversationMessage(
+    prisma,
+    conversation.id,
+    chatLawyerUser.id,
+    "CI TEST lawyer response"
+  );
+
+  await closeConversation(
+    prisma,
+    conversation.id,
+    chatClient.id
+  );
+
+  const eligible = await reviewEligibility(
+    prisma,
+    chatClient.id,
+    chatLawyer.id,
+    conversation.id
+  );
+
+  assert.equal(eligible.eligible, true);
+
+  const verifiedReview = await createVerifiedReview(prisma, {
+    userId: chatClient.id,
+    lawyerId: chatLawyer.id,
+    conversationId: conversation.id,
+    rating: 5,
+    comment: "CI TEST verified review"
+  });
+
+  assert.equal(verifiedReview.interactionRef, conversation.id);
+
+  await assert.rejects(
+    () =>
+      createVerifiedReview(prisma, {
+        userId: chatClient.id,
+        lawyerId: chatLawyer.id,
+        conversationId: conversation.id,
+        rating: 4
+      }),
+    /already has a review/
+  );
+
+  const oneWayConversation = await createLawyerConversation(
+    prisma,
+    chatClient.id,
+    chatLawyer.id,
+    true
+  );
+
+  await sendConversationMessage(
+    prisma,
+    oneWayConversation.id,
+    chatClient.id,
+    "CI TEST one-way message"
+  );
+
+  await closeConversation(
+    prisma,
+    oneWayConversation.id,
+    chatClient.id
+  );
+
+  const oneWayEligibility = await reviewEligibility(
+    prisma,
+    chatClient.id,
+    chatLawyer.id,
+    oneWayConversation.id
+  );
+
+  assert.equal(oneWayEligibility.eligible, false);
+  assert.equal(
+    oneWayEligibility.reason,
+    "no-two-way-interaction"
+  );
 
   const cleanupNow = new Date("2026-10-08T10:00:00.000Z");
 
