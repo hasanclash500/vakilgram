@@ -162,6 +162,10 @@ export async function reviewStagedLawChange(
     }
 
     const after = objectValue(review.afterData);
+    const before =
+      review.beforeData === null
+        ? null
+        : objectValue(review.beforeData);
     const ingestionItemId =
       typeof after.ingestionItemId === "string"
         ? after.ingestionItemId
@@ -280,6 +284,53 @@ export async function reviewStagedLawChange(
       ) {
         const lawId = requiredString(after, "lawId");
         await requireOfficialLaw(tx, lawId);
+
+        if (!before) {
+          throw new LawReviewError("INVALID_REVIEW_PAYLOAD");
+        }
+
+        const current = await tx.law.findUnique({
+          where: { id: lawId },
+          select: {
+            title: true,
+            sourceUrl: true,
+            enactedAt: true,
+            effectiveAt: true,
+            status: true
+          }
+        });
+
+        if (!current) {
+          throw new LawReviewError("SOURCE_NOT_AVAILABLE");
+        }
+
+        const staleChecks: Array<boolean> = [];
+
+        if (before.title !== undefined) {
+          staleChecks.push(current.title === before.title);
+        }
+        if (before.sourceUrl !== undefined) {
+          staleChecks.push(current.sourceUrl === before.sourceUrl);
+        }
+        if (before.status !== undefined) {
+          staleChecks.push(current.status === before.status);
+        }
+        if (before.enactedAt !== undefined) {
+          staleChecks.push(
+            (current.enactedAt?.toISOString() ?? null) ===
+              before.enactedAt
+          );
+        }
+        if (before.effectiveAt !== undefined) {
+          staleChecks.push(
+            (current.effectiveAt?.toISOString() ?? null) ===
+              before.effectiveAt
+          );
+        }
+
+        if (staleChecks.some((matches) => !matches)) {
+          throw new LawReviewError("STALE_REVIEW");
+        }
 
         const update: Prisma.LawUpdateInput = {};
         const title = nullableString(after, "title");
