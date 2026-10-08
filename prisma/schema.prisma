@@ -448,3 +448,16 @@ model AuditLog {
   @@index([entityType, entityId, createdAt])
   @@map("audit_logs")
 }
+
+
+model ApiRateLimit {
+  scope       String
+  visitorHash String   @map("visitor_hash")
+  windowStart DateTime @map("window_start")
+  count       Int      @default(0)
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@id([scope, visitorHash, windowStart])
+  @@index([windowStart])
+  @@map("api_rate_limits")
+}

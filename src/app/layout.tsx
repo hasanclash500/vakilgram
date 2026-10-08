@@ -1,10 +1,18 @@
 import type { Metadata } from "next";
+import { getSiteUrl } from "@/lib/site-url";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "وکیل‌گرام | دستیار حقوقی مستند",
+  metadataBase: new URL(getSiteUrl()),
+  title: {
+    default: "وکیل‌گرام | دستیار حقوقی مستند",
+    template: "%s | وکیل‌گرام"
+  },
   description:
-    "دستیار حقوقی فارسی با پاسخ مستند به قوانین و مقررات و معرفی وکلا"
+    "دستیار حقوقی فارسی با پاسخ مستند به قوانین و مقررات و معرفی وکلا",
+  alternates: {
+    canonical: "/"
+  }
 };
 
 export default function RootLayout({

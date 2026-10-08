@@ -1,23 +1,22 @@
-import { createHmac, randomUUID } from "node:crypto";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { getPrisma } from "@/lib/db/prisma";
+import {
+  hashVisitor,
+  resolveVisitorId,
+  VISITOR_COOKIE,
+  VISITOR_COOKIE_MAX_AGE
+} from "@/lib/privacy/visitor";
 import { CLICK_DEDUPE_WINDOW_MS } from "@/modules/ads/click-dedupe";
-
-const VISITOR_COOKIE = "vg_vid";
-
-function hashVisitor(visitorId: string, secret: string): string {
-  return createHmac("sha256", secret)
-    .update(visitorId)
-    .digest("hex");
-}
 
 export async function POST(
   _request: Request,
   context: { params: Promise<{ id: string }> }
 ) {
   const { id: lawyerId } = await context.params;
-  const secret = process.env.CLICK_HASH_SECRET;
+  const secret =
+    process.env.VISITOR_HASH_SECRET ??
+    process.env.CLICK_HASH_SECRET;
 
   if (!secret) {
     return NextResponse.json(
@@ -27,9 +26,14 @@ export async function POST(
   }
 
   const cookieStore = await cookies();
-  const existingVisitor = cookieStore.get(VISITOR_COOKIE)?.value;
-  const visitorId = existingVisitor ?? randomUUID();
-  const visitorHash = hashVisitor(visitorId, secret);
+  const visitor = resolveVisitorId(
+    cookieStore.get(VISITOR_COOKIE)?.value
+  );
+  const visitorHash = hashVisitor(
+    visitor.visitorId,
+    secret,
+    "ad-click"
+  );
 
   const prisma = getPrisma();
   const lawyer = await prisma.lawyer.findFirst({
@@ -68,14 +72,14 @@ export async function POST(
     counted: !duplicate
   });
 
-  if (!existingVisitor) {
+  if (visitor.isNew) {
     response.cookies.set({
       name: VISITOR_COOKIE,
-      value: visitorId,
+      value: visitor.visitorId,
       httpOnly: true,
       sameSite: "lax",
       secure: process.env.NODE_ENV === "production",
-      maxAge: 60 * 60 * 24 * 365,
+      maxAge: VISITOR_COOKIE_MAX_AGE,
       path: "/"
     });
   }
