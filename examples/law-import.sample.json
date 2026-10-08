@@ -1,0 +1,24 @@
+{
+  "title": "نمونه ساختگی - قانون آموزشی",
+  "slug": "demo-fictional-training-law",
+  "status": "UNKNOWN",
+  "sourceUrl": "https://example.invalid/demo-law",
+  "metadata": {
+    "demo": true,
+    "warning": "نمونه ساختگی؛ منبع قانونی واقعی نیست"
+  },
+  "articles": [
+    {
+      "number": "1",
+      "title": "نمونه ساختگی",
+      "text": "این متن کاملاً ساختگی است و فقط برای آزمایش قالب ورود داده استفاده می‌شود.",
+      "sourceUrl": "https://example.invalid/demo-law/article-1"
+    },
+    {
+      "number": "2",
+      "title": "نمونه ساختگی دوم",
+      "text": "این ماده نیز ساختگی است و نباید در پاسخ حقوقی واقعی به‌عنوان قانون معتبر استفاده شود.",
+      "sourceUrl": "https://example.invalid/demo-law/article-2"
+    }
+  ]
+}
